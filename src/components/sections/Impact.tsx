@@ -6,7 +6,7 @@ import s from "./Impact.module.css";
 export function Impact() {
   const sec = sections.impact;
   return (
-    <section id={sec.id} data-sec={sec.sec} data-screen-label={sec.screen} className={s.impact}>
+    <section id={sec.id} data-zl="" data-sec={sec.sec} data-screen-label={sec.screen} className={s.impact}>
       <div data-r="g3" className={cx(primitives.grid3, s.head)}>
         <SectionTag data-reveal="" title={sec.title} index={sec.index} className={s.tag} />
         <Mask pad="display" className={s.headingMask}>

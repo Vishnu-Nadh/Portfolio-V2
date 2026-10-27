@@ -8,7 +8,7 @@ html::-webkit-scrollbar,
 body::-webkit-scrollbar { display: none; width: 0; height: 0; }
 body {
   margin: 0;
-  background: var(--c-bg);
+  background: var(--c-page);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
@@ -33,6 +33,9 @@ input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:foc
 input:autofill { background: transparent !important; }
 
 @supports (height: 100svh) { #top { height: 100svh !important; } }
+
+/* Sections sit above the fixed ambient aurora (z-index 0). */
+[data-zl] { position: relative; z-index: 1; }
 
 /* ---------- Responsive layer ----------
    Layout hooks are [data-r] attributes so these overrides stay in one place. */

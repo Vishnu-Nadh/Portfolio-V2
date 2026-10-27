@@ -23,8 +23,14 @@ export const color = {
   textStrong: "#e6e6e4",
   accent: "#c8875a",
   accentPressed: "#8a6248",
-  accentGlint: "#f0cfa6",
   error: "#d97a5e",
+} as const;
+
+/** Ambient aurora palette: copper field, page ink, pale copper veil. */
+export const aurora = {
+  primary: "#8c4a22",
+  base: "#0b0a0a",
+  highlight: "#e3b38f",
 } as const;
 
 /** Motion curves. `out`/`inOut` mirror --ease-out / --ease-in-out. */

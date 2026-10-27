@@ -1,5 +1,5 @@
 .root {
-  background: var(--c-bg);
+  position: relative;
   color: var(--c-text);
   font-family: var(--font-ui);
   overflow-x: clip;

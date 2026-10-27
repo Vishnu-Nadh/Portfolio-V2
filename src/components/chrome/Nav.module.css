@@ -6,7 +6,7 @@
   z-index: 9600;
   padding: var(--edge-y) var(--gutter) clamp(28px, 4vh, 44px);
   pointer-events: none;
-  background: linear-gradient(180deg, var(--c-bg) 0%, var(--c-bg) 45%, rgba(17, 17, 17, .85) 70%, rgba(17, 17, 17, 0) 100%);
+  background: linear-gradient(180deg, rgba(11, 10, 10, .92) 0%, rgba(11, 10, 10, .8) 45%, rgba(11, 10, 10, .45) 70%, rgba(11, 10, 10, 0) 100%);
   display: grid;
   grid-template-columns: minmax(0, .75fr) minmax(0, 2fr) auto;
   column-gap: 24px;

@@ -1,0 +1,17 @@
+/* Sits under every section: sections carry [data-zl] (z-index 1). */
+.ambient {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  display: block;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.fluidHost {
+  position: absolute;
+  inset: 0;
+  display: block;
+  pointer-events: none;
+  overflow: hidden;
+}

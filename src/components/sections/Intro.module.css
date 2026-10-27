@@ -1,7 +1,6 @@
 .intro {
   position: relative;
   padding: var(--section-y) var(--gutter);
-  background: linear-gradient(180deg, var(--c-black) 0%, var(--c-bg) 38%);
 }
 
 .row { align-items: start; }

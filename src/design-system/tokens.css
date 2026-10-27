@@ -1,6 +1,9 @@
 :root {
   /* Neutrals, darkest to lightest */
+  --c-void: #000;
   --c-black: #020202;
+  /* Page base behind the ambient aurora */
+  --c-page: #0b0a0a;
   --c-overlay: #0a0a0a;
   --c-bg: #111;
   --c-surface-1: #151515;

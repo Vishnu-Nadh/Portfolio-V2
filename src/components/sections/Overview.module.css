@@ -1,6 +1,6 @@
 .overview {
   position: relative;
-  background: var(--c-bg);
+  background: var(--c-void);
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
 }
@@ -17,7 +17,7 @@
 .knotGlow {
   position: absolute;
   inset: 0;
-  background: radial-gradient(60% 55% at 50% 50%, var(--c-line-faint) 0%, #161616 40%, var(--c-bg) 78%);
+  background: radial-gradient(42% 38% at 50% 50%, rgba(200, 135, 90, .22) 0%, rgba(140, 74, 34, .12) 40%, rgba(0, 0, 0, 0) 75%);
 }
 
 .counter {

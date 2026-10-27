@@ -10,7 +10,7 @@ const pad = (n: number) => String(n).padStart(2, "0");
 export function Overview() {
   const sec = sections.overview;
   return (
-    <section id={sec.id} data-sec={sec.sec} data-screen-label={sec.screen} data-r="ov" className={s.overview}>
+    <section id={sec.id} data-zl="" data-sec={sec.sec} data-screen-label={sec.screen} data-r="ov" className={s.overview}>
       <div className={s.stage}>
         <div data-r="knot" className={s.knot}>
           <div aria-hidden="true" className={s.knotGlow} />

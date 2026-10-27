@@ -7,7 +7,7 @@ import s from "./Intro.module.css";
 export function Intro() {
   const sec = sections.intro;
   return (
-    <section id={sec.id} data-sec={sec.sec} data-screen-label={sec.screen} className={s.intro}>
+    <section id={sec.id} data-zl="" data-sec={sec.sec} data-screen-label={sec.screen} className={s.intro}>
       <div data-r="g3" className={cx(primitives.grid3, s.row)}>
         <SectionTag data-reveal="" title={sec.title} index={sec.index} className={s.tag} />
         <div className={s.lead}>

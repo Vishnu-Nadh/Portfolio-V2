@@ -20,6 +20,7 @@ npm run build && npm start
 | `src/components/sections/*` | Hero, Intro, Overview (What I do), Impact, Experience, About, Contact. |
 | `src/components/chrome/*` | Fixed nav, fullscreen menu, overlays (cursor seal, preloader, cut, toast, trails). |
 | `src/components/three/*` | Torus knot and contact "signal" WebGL scenes (three.js). |
+| `src/components/background/*`, `src/lib/aurora/*` | Page-wide copper aurora (fixed WebGL layer, 30fps, low-res) and the hero's cursor-reactive fluid, which lazy-loads after first paint and is skipped on ≤4-core devices, without WebGL2, or with reduced motion. |
 | `src/lib/motion/engine.ts` | Motion layer: Lenis smooth scroll, intro, lit words, cursor, lens, grain, comet, menu cut. Talks to markup through `data-*` attributes (documented at the top of the file). |
 | `src/lib/motion/reveal.ts` | Scroll reveals and count-ups: IntersectionObserver + CSS transitions, tuned per section. |
 | `src/app/globals.css` | Base styles and the responsive layer (`[data-r]` hooks, breakpoints 1180/1024/820/560). |

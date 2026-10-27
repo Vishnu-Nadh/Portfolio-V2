@@ -50,7 +50,6 @@
   display: none;
 }
 .comet { z-index: 9997; }
-.grain { z-index: 9998; }
 
 /* ---------- Seal cursor ---------- */
 .cursor {

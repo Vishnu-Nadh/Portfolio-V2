@@ -1,6 +1,7 @@
 .contact {
   position: relative;
   overflow: hidden;
+  background: var(--c-void);
   padding: clamp(140px, 18vw, 220px) var(--gutter) 0;
 }
 
@@ -228,7 +229,7 @@
 .signalGlow {
   position: absolute;
   inset: 0;
-  background: radial-gradient(50% 50% at 50% 50%, var(--c-surface-3) 0%, #141414 45%, rgba(17, 17, 17, 0) 75%);
+  background: radial-gradient(42% 38% at 50% 50%, rgba(200, 135, 90, .22) 0%, rgba(140, 74, 34, .12) 40%, rgba(0, 0, 0, 0) 75%);
 }
 .signalLabel {
   position: absolute;

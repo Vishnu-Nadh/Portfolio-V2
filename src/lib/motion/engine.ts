@@ -1,6 +1,6 @@
 import type Lenis from "lenis";
 import type { MotionSettings } from "@/config/motion";
-import { color, ease, expoOut, legacyEase } from "@/design-system/tokens";
+import { ease, expoOut, legacyEase } from "@/design-system/tokens";
 import { sealText } from "@/design-system/primitives";
 import { startReveals } from "./reveal";
 
@@ -24,13 +24,12 @@ import { startReveals } from "./reveal";
  *  [data-magnet]                          element follows the pointer
  *  [data-ovx]                             capability block (drives knot pose)
  *  [data-hname] [data-hfade] [data-hl] …  hero pieces
- *  [data-pre] [data-cut] [data-toast] [data-comet] [data-grain] [data-vncursor]  overlays
+ *  [data-pre] [data-cut] [data-toast] [data-comet] [data-vncursor]  overlays
  */
 
 export type KnotHandle = { el: HTMLElement; orient: number[]; lean: number[] };
 
 type Pointer = { x: number; y: number };
-type Grain = { x: number; y: number; vx: number; vy: number; life: number; max: number; r: number; tw: number; hue: boolean };
 type Box = { top: number; h: number };
 type ScrollCache = {
   t: number;
@@ -78,12 +77,9 @@ export class MotionEngine {
   private raf = 0;
   private timers: Record<string, ReturnType<typeof setTimeout> | undefined> = {};
   private ptr: Pointer | null = null;
-  private pvx = 0;
-  private pvy = 0;
   private pMoveT = 0;
   private ptrMoved = false;
   private ptrOut = false;
-  private overLens = false;
   private overLink = false;
   private lastHit: Element | null = null;
   private labelHold = 0;
@@ -92,16 +88,12 @@ export class MotionEngine {
   private introLock = false;
   private cutting = false;
   private lastSY: number | undefined;
-  private lastScrollT = 0;
   private frame = 0;
   private cache: ScrollCache | null = null;
   private curSec: string | undefined;
   private detK: number | undefined;
   private cMode: string | undefined;
   private leanRect: DOMRect | null = null;
-  private lens: { x: number; y: number; vx: number; vy: number; s: number; seen: boolean } | null = null;
-  private grains: Grain[] = [];
-  private gDirty = false;
   private trail: Pointer[] = [];
   private cometDirty = false;
   private cleanup: (() => void)[] = [];
@@ -118,9 +110,6 @@ export class MotionEngine {
   }
   private fine() {
     return matchMedia("(pointer:fine)").matches;
-  }
-  private lensOn() {
-    return this.o.settings.lensHover && this.motionOn() && this.fine();
   }
   private cursorOn() {
     return this.o.settings.sealCursor && this.fine();
@@ -232,7 +221,6 @@ export class MotionEngine {
   /* ---------------- lifecycle ---------------- */
   mount() {
     const on = this.motionOn();
-    if (this.lensOn()) this.buildLensMap();
     if (on) qsa("[data-w]").forEach((w) => (w.style.opacity = ".16"));
     if (on) this.cleanup.push(startReveals());
     this.runIntro();
@@ -246,11 +234,7 @@ export class MotionEngine {
 
     const onMove = (e: PointerEvent) => {
       this.ptrOut = false;
-      if (this.ptr) {
-        this.pvx = e.clientX - this.ptr.x;
-        this.pvy = e.clientY - this.ptr.y;
-        this.pMoveT = performance.now();
-      }
+      if (this.ptr) this.pMoveT = performance.now();
       c.tx = e.clientX;
       c.ty = e.clientY;
       this.ptr = { x: e.clientX, y: e.clientY };
@@ -262,9 +246,8 @@ export class MotionEngine {
       }
       const t = e.target as Element;
       const closest = (s: string) => (t && t.closest ? t.closest<HTMLElement>(s) : null);
-      this.overLens = !!closest("[data-hname]") && this.lensOn();
       this.overLink = !!closest("a,button");
-      c.ts = this.overLens ? 1 : closest("a,button,[data-cursor]") ? 0.85 : 0.5;
+      c.ts = closest("a,button,[data-cursor]") ? 0.85 : 0.5;
       const m = closest("[data-magnet]");
       if (this.mag && this.mag !== m) {
         this.mag.style.transform = "";
@@ -334,17 +317,13 @@ export class MotionEngine {
       const sy = this.lenis ? this.lenis.scroll : scrollY;
       const moved = sy !== this.lastSY;
       this.lastSY = sy;
-      if (moved) this.lastScrollT = performance.now();
       this.frame++;
       if (moved || this.frame % 20 === 0) this.stepScroll(sy);
       if (this.ptr && (this.ptrMoved || (moved && this.frame % 6 === 0))) {
         this.ptrMoved = false;
         const t = document.elementFromPoint(this.ptr.x, this.ptr.y);
-        if (t !== this.lastHit) {
-          // Content scrolling under a still pointer changes what it is over.
-          this.overLens = !!(t && t.closest && t.closest("[data-hname]")) && this.lensOn();
-          this.overLink = !!(t && t.closest && t.closest("a,button"));
-        }
+        // Content scrolling under a still pointer changes what it is over.
+        if (t !== this.lastHit) this.overLink = !!(t && t.closest && t.closest("a,button"));
         if (t !== this.lastHit || (this.labelHold && performance.now() > this.labelHold)) {
           this.lastHit = t;
           if (!this.labelHold || performance.now() > this.labelHold) {
@@ -354,9 +333,7 @@ export class MotionEngine {
         }
       }
       this.stepLean();
-      if (this.lensOn() || this.lens) this.stepLens();
       this.stepCursorParts();
-      if (this.lensOn() || this.grains.length) this.stepGrain();
       this.stepComet();
       const el = cursorEl();
       if (!el) return;
@@ -480,30 +457,6 @@ export class MotionEngine {
     obj.lean = [lx, ly];
   }
 
-  private buildLensMap() {
-    const N = 200;
-    const cv = document.createElement("canvas");
-    cv.width = cv.height = N;
-    const ctx = cv.getContext("2d")!;
-    const img = ctx.createImageData(N, N);
-    const d = img.data;
-    for (let y = 0; y < N; y++)
-      for (let x = 0; x < N; x++) {
-        const dx = (x - N / 2) / (N / 2);
-        const dy = (y - N / 2) / (N / 2);
-        const r2 = dx * dx + dy * dy;
-        const i = (y * N + x) * 4;
-        const f = r2 < 1 ? Math.pow(1 - r2, 1.6) : 0;
-        d[i] = 128 - dx * f * 127;
-        d[i + 1] = 128 - dy * f * 127;
-        d[i + 2] = 128;
-        d[i + 3] = 255;
-      }
-    ctx.putImageData(img, 0, 0);
-    const im = qs("[data-lens-img]");
-    if (im) im.setAttribute("href", cv.toDataURL());
-  }
-
   /** Soft smoke trail. Drawn at 1x and hidden entirely while idle. */
   private stepComet() {
     const cv = qs<HTMLCanvasElement>("[data-comet]");
@@ -554,134 +507,15 @@ export class MotionEngine {
     }
   }
 
-  /** Copper grain shed by the hero lens. Hidden entirely while idle. */
-  private stepGrain() {
-    const cv = qs<HTMLCanvasElement>("[data-grain]");
-    if (!cv) return;
-    const P = this.grains;
-    const on = this.o.settings.goldGrain && this.lensOn();
-    const dpr = Math.min(devicePixelRatio || 1, 1.5);
-    const W = innerWidth;
-    const H = innerHeight;
-    if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) {
-      cv.width = Math.round(W * dpr);
-      cv.height = Math.round(H * dpr);
-    }
-    const ctx = cv.getContext("2d")!;
-    const fresh = this.pMoveT && performance.now() - this.pMoveT < 60;
-    if (on && this.overLens && this.ptr && fresh) {
-      const sp = Math.hypot(this.pvx, this.pvy);
-      const n = Math.min(5, Math.floor(sp / 7) + (Math.random() < 0.35 ? 1 : 0));
-      for (let k = 0; k < n && P.length < 160; k++) {
-        const a = Math.random() * Math.PI * 2;
-        const rr = Math.sqrt(Math.random()) * 64;
-        P.push({
-          x: this.ptr.x + Math.cos(a) * rr,
-          y: this.ptr.y + Math.sin(a) * rr,
-          vx: this.pvx * 0.06 + (Math.random() - 0.5) * 0.5,
-          vy: this.pvy * 0.04 - Math.random() * 0.5,
-          life: 0,
-          max: 70 + Math.random() * 70,
-          r: 0.5 + Math.random() * 1.2,
-          tw: Math.random() * 6,
-          hue: Math.random() < 0.3,
-        });
-      }
-    }
-    if (!P.length) {
-      if (this.gDirty) {
-        ctx.setTransform(1, 0, 0, 1, 0, 0);
-        ctx.clearRect(0, 0, cv.width, cv.height);
-        this.gDirty = false;
-        cv.style.display = "none";
-      }
-      return;
-    }
-    if (cv.style.display !== "block") cv.style.display = "block";
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, W, H);
-    this.gDirty = true;
-    for (let k = P.length - 1; k >= 0; k--) {
-      const p = P[k];
-      p.life++;
-      p.vy += 0.028;
-      p.vx *= 0.985;
-      p.vy *= 0.985;
-      p.x += p.vx;
-      p.y += p.vy;
-      if (p.life > p.max || p.y > H + 10) {
-        P.splice(k, 1);
-        continue;
-      }
-      const t = p.life / p.max;
-      const a = (t < 0.15 ? t / 0.15 : 1 - (t - 0.15) / 0.85) * (0.55 + 0.45 * Math.sin(p.tw + p.life * 0.25));
-      ctx.globalAlpha = Math.max(0, a);
-      ctx.fillStyle = p.hue ? color.accentGlint : color.accent;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.r, 0, 6.2832);
-      ctx.fill();
-    }
-    ctx.globalAlpha = 1;
-  }
-
   private stepCursorParts() {
     const bg = qs("[data-cbg]");
     const dc = qs("[data-cdisc]");
-    const hollow = !!((this.overLens && this.ptr) || this.overLink);
+    const hollow = this.overLink;
     const m = hollow ? "1" : "0";
     if (this.cMode === m) return;
     this.cMode = m;
     if (bg) bg.style.background = hollow ? "rgba(17,17,17,0)" : "rgba(17,17,17,.72)";
     if (dc) dc.style.transform = hollow ? "scale(0)" : "none";
-  }
-
-  /** Liquid lens over the hero name. Drops out while the page scrolls. */
-  private stepLens() {
-    const el = qs("[data-hname]");
-    if (!el) return;
-    const disp = qs<SVGElement>("[data-lens-disp]");
-    const im = qs<SVGElement>("[data-lens-img]");
-    const L = this.lens || (this.lens = { x: 0, y: 0, vx: 0, vy: 0, s: 0, seen: false });
-    const scrolling = performance.now() - this.lastScrollT < 220;
-    const active = this.overLens && this.ptr && !scrolling;
-    if (active) {
-      const r = el.getBoundingClientRect();
-      const k = r.width / Math.max(1, el.offsetWidth);
-      const tx = (this.ptr!.x - r.left) / k;
-      const ty = (this.ptr!.y - r.top) / k;
-      if (!L.seen || L.s < 0.02) {
-        L.x = tx;
-        L.y = ty;
-        L.vx = L.vy = 0;
-        L.seen = true;
-      }
-      L.vx = (L.vx + (tx - L.x) * 0.16) * 0.7;
-      L.vy = (L.vy + (ty - L.y) * 0.16) * 0.7;
-      L.x += L.vx;
-      L.y += L.vy;
-    }
-    L.s += ((active ? 1 : 0) - L.s) * (active ? 0.09 : 0.14);
-    if ((L.s < 0.01 && !active) || (scrolling && L.s < 0.35)) {
-      if (scrolling) L.s = 0;
-      if (el.style.filter) el.style.filter = "";
-      if (disp) disp.setAttribute("scale", "0");
-      return;
-    }
-    if (!el.style.filter) el.style.filter = "url(#vnLens)";
-    const ax = Math.min(0.45, Math.abs(L.vx) / 26);
-    const ay = Math.min(0.45, Math.abs(L.vy) / 26);
-    const base = 170;
-    const w = base * (1 + ax - ay * 0.4);
-    const hh = base * (1 + ay - ax * 0.4);
-    const t = performance.now() / 1000;
-    const breathe = 1 + Math.sin(t * 2.4) * 0.04;
-    if (im) {
-      im.setAttribute("x", (L.x - w / 2).toFixed(1));
-      im.setAttribute("y", (L.y - hh / 2).toFixed(1));
-      im.setAttribute("width", w.toFixed(1));
-      im.setAttribute("height", hh.toFixed(1));
-    }
-    if (disp) disp.setAttribute("scale", (L.s * (64 + Math.min(40, Math.hypot(L.vx, L.vy) * 1.2)) * breathe).toFixed(1));
   }
 
   private stepScroll(sy: number) {

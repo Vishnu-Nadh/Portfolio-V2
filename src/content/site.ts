@@ -86,7 +86,6 @@ export const nav = {
 export const hero = {
   greeting: "HEY,",
   greetingAccent: "I AM",
-  cursor: "LOOK CLOSER",
 } as const;
 
 export const intro = {

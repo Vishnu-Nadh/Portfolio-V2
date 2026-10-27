@@ -24,7 +24,7 @@ function Words({ text }: { text: string }) {
 export function About() {
   const sec = sections.about;
   return (
-    <section id={sec.id} data-sec={sec.sec} data-screen-label={sec.screen} data-r="g3" className={cx(primitives.grid3, s.about)}>
+    <section id={sec.id} data-zl="" data-sec={sec.sec} data-screen-label={sec.screen} data-r="g3" className={cx(primitives.grid3, s.about)}>
       <SectionTag data-reveal="" title={sec.title} index={sec.index} className={s.tag} />
       <p data-words="" className={s.body}>
         {about.body.map((part, i) =>

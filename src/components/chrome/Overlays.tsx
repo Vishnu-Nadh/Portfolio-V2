@@ -20,7 +20,6 @@ export function Overlays() {
       <div data-toast="" role="status" aria-live="polite" className={cx(type.label, s.toast)} />
 
       <canvas data-comet="" aria-hidden="true" className={cx(s.canvas, s.comet)} />
-      <canvas data-grain="" aria-hidden="true" className={cx(s.canvas, s.grain)} />
 
       <div data-vncursor="" className={s.cursor}>
         <div data-cbg="" className={s.cursorBg} />

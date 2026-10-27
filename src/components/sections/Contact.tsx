@@ -8,7 +8,7 @@ import s from "./Contact.module.css";
 export function Contact() {
   const sec = sections.contact;
   return (
-    <footer id={sec.id} data-sec={sec.sec} data-screen-label={sec.screen} className={s.contact}>
+    <footer id={sec.id} data-zl="" data-sec={sec.sec} data-screen-label={sec.screen} className={s.contact}>
       <div data-r="g3" className={cx(primitives.grid3, s.head)}>
         <SectionTag data-reveal="" title={sec.title} index={sec.index} className={s.tag} />
         <h2 className={cx(type.display, s.heading)}>

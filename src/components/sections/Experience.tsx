@@ -12,7 +12,7 @@ export function Experience() {
   const [open, setOpen] = useState<Record<number, boolean>>({ 0: true });
 
   return (
-    <section id={sec.id} data-sec={sec.sec} data-screen-label={sec.screen} className={s.work}>
+    <section id={sec.id} data-zl="" data-sec={sec.sec} data-screen-label={sec.screen} className={s.work}>
       <div data-r="g3" className={cx(primitives.grid3, s.head)}>
         <SectionTag data-reveal="" title={sec.title} index={sec.index} className={s.tag} />
         <Mask pad="display" className={s.headingMask}>

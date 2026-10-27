@@ -2,10 +2,6 @@
 export const motionSettings = {
   /** Soft smoke trail following the pointer. */
   cometTail: true,
-  /** Copper grain particles shed by the hero lens. */
-  goldGrain: true,
-  /** Liquid lens distortion over the hero name. */
-  lensHover: true,
   /** Preloader count-up and hero entrance. */
   intro: true,
   /** Scroll reveals, counters, parallax. Also gated by prefers-reduced-motion. */
