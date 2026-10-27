@@ -11,13 +11,6 @@
   z-index: 1;
 }
 
-/* Behind the name; hosts the fluid, otherwise the ambient aurora shows through. */
-.glow {
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-}
 
 .name {
   position: relative;

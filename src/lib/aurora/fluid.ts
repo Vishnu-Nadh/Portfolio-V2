@@ -12,8 +12,9 @@ import { AMBIENT, FRAG, PALETTE, VERT, auroraClock, hex } from "./aurora";
  * SEO and screen readers. Lazy-loaded after first paint by <HeroFluid>.
  *
  * Budget: < 2 ms GPU/frame at 1080p on a mid-range laptop. Paused off-screen
- * and in hidden tabs; skipped on ≤ 4 cores, without WebGL2, or with reduced
- * motion.
+ * and in hidden tabs; skipped on ≤ 4 cores, without WebGL2, on software
+ * (CPU) renderers, or with reduced motion; removes itself if the frame rate
+ * stays below `minFps`.
  */
 
 export const FLUID_DEFAULTS = {
@@ -30,8 +31,27 @@ export const FLUID_DEFAULTS = {
   smoke: 0.12,
   touchForce: 0.4,
   sceneScale: 0.8,
+  /**
+   * Frame-rate floor. Below it for two windows in a row, the fluid removes
+   * itself (0 disables). Under 30 so 30fps-capped displays and low-power
+   * modes keep the effect.
+   */
+  minFps: 24,
+  /** Length of one frame-rate window, in ms. */
+  fpsWindow: 2000,
 };
 export type FluidConfig = typeof FLUID_DEFAULTS;
+
+/** Renderers that run WebGL on the CPU: the simulation would starve the page. */
+const SOFTWARE_RENDERER = /swiftshader|llvmpipe|softpipe|software|basic render/i;
+
+/** Best-effort renderer name. Firefox reports it directly; Chrome and Safari mask it behind the debug extension. */
+function rendererName(gl: WebGL2RenderingContext) {
+  const direct = String(gl.getParameter(gl.RENDERER) || "");
+  if (direct && !/^(webkit webgl|mozilla)$/i.test(direct)) return direct;
+  const ext = gl.getExtension("WEBGL_debug_renderer_info");
+  return ext ? String(gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) || "") : direct;
+}
 
 const DYE: [number, number, number] = [0.784, 0.529, 0.353]; // copper
 const BG = hex(PALETTE.base);
@@ -65,6 +85,10 @@ export function mountFluid(host: HTMLElement, overrides: Partial<FluidConfig> = 
   const maybeGl = canvas.getContext("webgl2", { alpha: false, antialias: false, depth: false, stencil: false, premultipliedAlpha: false });
   if (!maybeGl) return null;
   const gl: WebGL2RenderingContext = maybeGl;
+  if (SOFTWARE_RENDERER.test(rendererName(gl))) {
+    gl.getExtension("WEBGL_lose_context")?.loseContext();
+    return null;
+  }
   const hasFloatRT = !!gl.getExtension("EXT_color_buffer_float");
   gl.getExtension("OES_texture_float_linear");
 
@@ -506,8 +530,33 @@ in vec2 vUv, vL, vR, vT, vB; out vec4 o;\n`;
   let running = false;
   let visible = true;
   let dead = false;
+  // Frame-rate watchdog: once the name is handed off, two slow windows in a
+  // row mean the device can't keep up, so give the hero back to the aurora.
+  let winT0 = 0;
+  let winFrames = 0;
+  let slowWindows = 0;
+  function watchdog(now: number) {
+    if (!textReady || !CFG.minFps) return false;
+    if (!winT0) {
+      winT0 = now;
+      winFrames = 0;
+      return false;
+    }
+    winFrames++;
+    const span = now - winT0;
+    if (span < CFG.fpsWindow) return false;
+    slowWindows = (winFrames * 1000) / span < CFG.minFps ? slowWindows + 1 : 0;
+    winT0 = now;
+    winFrames = 0;
+    return slowWindows >= 2;
+  }
   function frame(now: number) {
     if (!running) return;
+    if (watchdog(now)) {
+      console.info("fluid: frame rate below", CFG.minFps, "fps; using the static aurora");
+      dispose();
+      return;
+    }
     raf = requestAnimationFrame(frame);
     const dt = last ? Math.min((now - last) / 1000, 1 / 30) : 1 / 60;
     last = now;
@@ -533,6 +582,7 @@ in vec2 vUv, vL, vR, vT, vB; out vec4 o;\n`;
     if (go && !running) {
       running = true;
       last = 0;
+      winT0 = 0; // time spent paused (off-screen, hidden tab) doesn't count
       raf = requestAnimationFrame(frame);
     } else if (!go && running) {
       running = false;

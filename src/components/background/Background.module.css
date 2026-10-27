@@ -8,6 +8,15 @@
   overflow: hidden;
 }
 
+/* Hero + intro wrapper; the fluid layer lies behind both (sections are z-index 1). */
+.span { position: relative; }
+.spanLayer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
 .fluidHost {
   position: absolute;
   inset: 0;

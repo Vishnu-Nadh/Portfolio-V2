@@ -2,7 +2,6 @@ import { motionSettings } from "@/config/motion";
 import { cursor, hero, profile, sections, socials } from "@/content/site";
 import { Monogram, Seal, type } from "@/design-system/primitives";
 import { cx } from "@/lib/cx";
-import { HeroFluid } from "../background/HeroFluid";
 import { InstagramIcon, LinkedInIcon, MailIcon } from "../icons";
 import s from "./Hero.module.css";
 
@@ -16,9 +15,6 @@ export function Hero() {
   const { hero: sec } = sections;
   return (
     <header id={sec.id} data-sec={sec.sec} data-screen-label={sec.screen} className={s.hero}>
-      <div aria-hidden="true" className={s.glow}>
-        <HeroFluid />
-      </div>
 
       <div data-hname="" className={s.name}>
         <div className={s.heyMask}>

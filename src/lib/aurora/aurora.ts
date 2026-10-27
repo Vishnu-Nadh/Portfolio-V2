@@ -47,10 +47,11 @@ void main(){
   vec2 warp = vec2(fbm(p*0.8 + vec2(t, -t*0.5)), fbm(p*0.8 + vec2(-t*0.6, t*0.75)));
   float f = fbm(p*1.05 + warp*1.15 + uMouse*0.18);
   float g = fbm(p*0.62 - warp*0.75 + vec2(t*0.4, t*0.22));
-  vec2 q = vec2(-p.x, p.y);
-  vec2 warpQ = vec2(fbm(q*0.8 + vec2(t, -t*0.5)), fbm(q*0.8 + vec2(-t*0.6, t*0.75)));
-  float f2 = fbm(q*1.05 + warpQ*1.15 - uMouse*0.18);
-  float g2 = fbm(q*0.62 - warpQ*0.75 + vec2(t*0.4, t*0.22));
+  // second, independent layer: rotated + offset domain (no mirroring) so patches fall randomly but evenly
+  vec2 q = mat2(0.80, -0.60, 0.60, 0.80) * p + vec2(7.31, -3.17);
+  vec2 warpQ = vec2(fbm(q*0.8 + vec2(-t*0.7, t*0.45)), fbm(q*0.8 + vec2(t*0.55, -t*0.8)));
+  float f2 = fbm(q*1.12 + warpQ*1.15 + vec2(2.9, 5.4) - uMouse*0.18);
+  float g2 = fbm(q*0.66 - warpQ*0.75 + vec2(-4.2 - t*0.36, 1.7 + t*0.26));
   float m1 = max(smoothstep(${f(EDGE1[0])}+uSparse, ${f(EDGE1[1])}+uSparse, f), smoothstep(${f(EDGE1[0])}+uSparse, ${f(EDGE1[1])}+uSparse, f2));
   float m2 = max(smoothstep(${f(EDGE2[0])}+uSparse, ${f(EDGE2[1])}+uSparse, g), smoothstep(${f(EDGE2[0])}+uSparse, ${f(EDGE2[1])}+uSparse, g2));
   vec3 col = mix(uB, uA, m1);

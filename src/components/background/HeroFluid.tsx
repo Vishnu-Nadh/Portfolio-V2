@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import s from "./Background.module.css";
 
 /**
- * Hosts the cursor-reactive fluid over the hero. It draws nothing itself:
+ * Hosts the cursor-reactive fluid behind the hero and intro. It draws nothing itself:
  * the page-wide aurora shows through until the fluid module has loaded,
  * which happens once the page is idle after first paint.
  */

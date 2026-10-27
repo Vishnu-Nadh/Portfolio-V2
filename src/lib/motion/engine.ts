@@ -122,8 +122,8 @@ export class MotionEngine {
   }
 
   /* ---------------- public API ---------------- */
-  scrollToY(y: number, d?: number, easing?: (t: number) => number) {
-    if (this.lenis) this.lenis.scrollTo(y, { duration: d ?? 1.6, easing });
+  scrollToY(y: number, d?: number) {
+    if (this.lenis) this.lenis.scrollTo(y, { duration: d ?? 1.6 });
     else scrollTo({ top: y, behavior: "smooth" });
   }
 
@@ -283,12 +283,10 @@ export class MotionEngine {
       if (href.startsWith("mailto:")) {
         e.preventDefault();
         this.copyEmail(href.slice(7));
-      } else if (href.length > 1 && href.startsWith("#")) {
-        // In-page anchors glide like the rest of the page.
-        const target = qs(href);
-        if (!target) return;
+      } else if (this.lenis && href.length > 1 && href.startsWith("#")) {
+        // Lenis glides to in-page anchors (its `anchors` option); stop the
+        // browser's instant jump so it doesn't cut the glide short.
         e.preventDefault();
-        this.scrollToY(target.getBoundingClientRect().top + scrollY, 1.8, expoOut);
       }
     };
     document.addEventListener("click", onClickDoc);
@@ -307,7 +305,13 @@ export class MotionEngine {
 
     void import("lenis").then(({ default: LenisCtor }) => {
       if (this.raf === -1) return;
-      this.lenis = new LenisCtor({ lerp: 0.1, wheelMultiplier: 1, touchMultiplier: 1.4, smoothWheel: true });
+      this.lenis = new LenisCtor({
+        lerp: 0.1,
+        wheelMultiplier: 1,
+        touchMultiplier: 1.4,
+        smoothWheel: true,
+        anchors: { duration: 1.8, easing: expoOut },
+      });
       if (this.introLock || this.menuOpen) this.lenis.stop();
     });
 

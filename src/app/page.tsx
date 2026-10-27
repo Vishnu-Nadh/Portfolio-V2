@@ -1,4 +1,5 @@
 import { AmbientAurora } from "@/components/background/AmbientAurora";
+import { FluidSpan } from "@/components/background/FluidSpan";
 import { Menu } from "@/components/chrome/Menu";
 import { Nav } from "@/components/chrome/Nav";
 import { Overlays } from "@/components/chrome/Overlays";
@@ -17,8 +18,10 @@ export default function Home() {
     <MotionProvider>
       <div className={s.root}>
         <AmbientAurora />
-        <Hero />
-        <Intro />
+        <FluidSpan>
+          <Hero />
+          <Intro />
+        </FluidSpan>
         <Overview />
         <Impact />
         <Experience />
