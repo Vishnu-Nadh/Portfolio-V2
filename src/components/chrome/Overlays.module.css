@@ -1,0 +1,120 @@
+/* ---------- Section cut (menu jump) ---------- */
+.cut {
+  position: fixed;
+  inset: 0;
+  z-index: 9700;
+  display: none;
+  flex-direction: column;
+  justify-content: flex-end;
+  box-sizing: border-box;
+  padding: var(--edge-y) var(--gutter);
+  background: var(--c-overlay);
+  pointer-events: none;
+}
+.cutRow {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+}
+.cutNameMask { font-size: clamp(72px, 12vw, 180px); }
+.cutName {
+  line-height: .8;
+  color: var(--c-text);
+}
+
+/* ---------- Toast ---------- */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: clamp(24px, 4vh, 40px);
+  z-index: 9990;
+  transform: translate(-50%, 16px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .4s ease, transform .5s var(--ease-out);
+  padding: 12px 20px;
+  border-radius: 999px;
+  background: var(--c-surface-3);
+  color: var(--c-text-strong);
+  white-space: nowrap;
+}
+
+/* ---------- Canvases ---------- */
+.canvas {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  display: none;
+}
+.comet { z-index: 9997; }
+.grain { z-index: 9998; }
+
+/* ---------- Seal cursor ---------- */
+.cursor {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 150px;
+  height: 150px;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0;
+  transition: opacity .3s;
+  will-change: transform;
+}
+.cursorBg {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: rgba(17, 17, 17, .72);
+  transition: background .5s ease;
+}
+.cursorRing {
+  position: absolute;
+  inset: 0;
+}
+.cursorDisc {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  margin: -23px 0 0 -23px;
+  transition: transform .6s var(--ease-out);
+}
+
+/* ---------- Preloader ---------- */
+.pre {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: var(--c-black);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  box-sizing: border-box;
+  padding: var(--edge-y) var(--gutter);
+}
+.preRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 24px;
+}
+.preTitle { color: var(--c-text-muted); }
+.preCount {
+  font-size: clamp(72px, 9vw, 136px);
+  line-height: .78;
+  color: var(--c-text);
+}
+.preTrack {
+  margin-top: 28px;
+  height: 1px;
+  background: var(--c-surface-3);
+}
+.preLine {
+  height: 1px;
+  width: 0;
+  background: var(--c-accent);
+}

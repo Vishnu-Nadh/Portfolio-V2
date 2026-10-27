@@ -1,0 +1,117 @@
+.overview {
+  position: relative;
+  background: var(--c-bg);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.stage { position: relative; }
+
+.knot {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  min-height: 560px;
+}
+
+.knotGlow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(60% 55% at 50% 50%, var(--c-line-faint) 0%, #161616 40%, var(--c-bg) 78%);
+}
+
+.counter {
+  position: absolute;
+  left: var(--gutter);
+  bottom: clamp(40px, 8vh, 76px);
+  color: var(--c-text-muted);
+}
+.counterTotal { color: var(--c-text-ghost); }
+
+.content { min-width: 0; }
+
+.top {
+  box-sizing: border-box;
+  padding: clamp(150px, 20vh, 200px) var(--gutter) 0 0;
+}
+
+.details {
+  padding: 0 var(--gutter) clamp(120px, 16vh, 180px) 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.block {
+  position: relative;
+  min-height: 84vh;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 36px;
+  padding: 96px 0;
+}
+
+.head {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.nameMask { font-size: clamp(44px, 5.6vw, 84px); }
+.name {
+  margin: 0;
+  font-size: inherit; /* size lives on the mask */
+  line-height: .8;
+  color: var(--c-text-strong);
+}
+
+.desc {
+  margin: 0;
+  max-width: 440px;
+  color: var(--c-text-soft);
+}
+
+.skills {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.skillsLabel { color: var(--c-text-dim); }
+.tools {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 32px;
+  max-width: 440px;
+}
+.tool {
+  font-family: var(--font-body);
+  font-size: 15px;
+  color: var(--c-text-list);
+  padding: 8px 0;
+  border-bottom: 1px solid var(--c-line-faint);
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 112px;
+  gap: 2px;
+  font-family: var(--font-body);
+  font-size: 15px;
+}
+.fact {
+  display: flex;
+}
+.fact:first-child {
+  background: var(--c-surface-2);
+  padding: 44px 28px 18px;
+  justify-content: flex-end;
+  gap: 20px;
+}
+.fact:last-child {
+  background: var(--c-surface-1);
+  padding: 44px 22px 18px;
+  gap: 14px;
+}
+.factLabel { color: var(--c-text-strong); }
+.factValue { color: var(--c-text-muted); }

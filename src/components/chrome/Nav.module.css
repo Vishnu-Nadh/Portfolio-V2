@@ -1,0 +1,128 @@
+.nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  z-index: 9600;
+  padding: var(--edge-y) var(--gutter) clamp(28px, 4vh, 44px);
+  pointer-events: none;
+  background: linear-gradient(180deg, var(--c-bg) 0%, var(--c-bg) 45%, rgba(17, 17, 17, .85) 70%, rgba(17, 17, 17, 0) 100%);
+  display: grid;
+  grid-template-columns: minmax(0, .75fr) minmax(0, 2fr) auto;
+  column-gap: 24px;
+  align-items: center;
+}
+
+.home { pointer-events: auto; }
+
+.fades { transition: opacity .4s ease; }
+.hidden { opacity: 0; }
+
+.links {
+  pointer-events: auto;
+  display: flex;
+  gap: clamp(28px, 5vw, 80px);
+  white-space: nowrap;
+}
+.links.hidden { pointer-events: none; }
+
+.right {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  pointer-events: auto;
+}
+
+/* Status and ticker reserve the same 4px under their text as the links do for
+   the hover underline, so every nav label centres on one line. */
+.status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 4px;
+  color: var(--c-text-muted);
+  white-space: nowrap;
+}
+.dot {
+  position: relative;
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+}
+.dot > span {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--c-accent);
+}
+.available { color: var(--c-text-strong); }
+.dash {
+  width: 16px;
+  height: 1px;
+  background: var(--c-rule);
+}
+
+/* Only the label takes part in layout, so it centres on the same line as the
+   other nav text; the progress bar hangs 8px below it. */
+.section {
+  position: relative;
+  padding-bottom: 4px;
+}
+
+/* Every label is stacked in one grid cell; the invisible copies hold the
+   ticker at the widest label so neighbours never shift when it changes.
+   Height and line-height match the label type (1.3em) so it shares their line. */
+.ticker {
+  display: grid;
+  overflow: hidden;
+  height: 1.3em;
+}
+.ticker > * {
+  grid-area: 1 / 1;
+  line-height: 1.3em;
+  white-space: nowrap;
+}
+.tickerSizer { visibility: hidden; }
+.tickerText {
+  color: var(--c-text-muted);
+  text-align: right;
+}
+.progress {
+  position: absolute;
+  top: calc(100% + 4px); /* 8px below the label, past the 4px reserve */
+  right: 0;
+  width: 72px;
+  height: 1px;
+  background: var(--c-line-strong);
+}
+.progressBar {
+  height: 1px;
+  width: 100%;
+  background: var(--c-accent);
+  transform: scaleX(0);
+  transform-origin: left;
+  will-change: transform;
+}
+
+.burger {
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: transform .5s var(--ease-out);
+}
+.bar {
+  display: block;
+  width: 30px;
+  height: 1.5px;
+  background: var(--c-text-max);
+  transition: transform .6s var(--ease-in-out);
+}
+.open .bar:first-child { transform: translateY(3.75px) rotate(45deg); }
+.open .bar:last-child { transform: translateY(-3.75px) rotate(-45deg); }
