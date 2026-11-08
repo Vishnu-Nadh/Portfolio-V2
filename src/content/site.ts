@@ -188,14 +188,14 @@ export const capabilities: Capability[] = [
   },
 
   {
-    name: "Experience",
+    name: "UI/UX",
 
     title: "Interfaces with intent",
 
     description:
       "Turning Figma designs into responsive, maintainable interfaces with consistent design systems, reusable components, and theme-aware UI. Outside core product work, I explore creative development, smooth scrolling, motion, and browser-based 3D.",
 
-    tools: ["UI/UX", "Figma-to-Code", "Design Systems", "GSAP", "Framer Motion", "Lenis", "Three.js"],
+    tools: ["Figma-to-Code", "Design Systems", "GSAP", "Framer Motion", "Lenis", "Three.js"],
   },
 
   {
