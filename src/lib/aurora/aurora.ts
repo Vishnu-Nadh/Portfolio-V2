@@ -9,7 +9,7 @@ import { aurora as PALETTE } from "@/design-system/tokens";
 export { PALETTE };
 
 /** Time multiplier on real dt. */
-export const SPEED = 1.62;
+export const SPEED = 1.944; // design's 1.62, raised 20%
 const DRIFT = 0.028; // t = uTime * DRIFT
 const EDGE1 = [0.02, 0.3]; // primary field edge hardness
 const EDGE2 = [0.05, 0.34]; // veil edge hardness

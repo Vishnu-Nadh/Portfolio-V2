@@ -1,8 +1,7 @@
 import { capabilities, overview, sections } from "@/content/site";
 import { Mask, Rule, SectionTag, type } from "@/design-system/primitives";
-import { color } from "@/design-system/tokens";
 import { cx } from "@/lib/cx";
-import { KnotObject } from "../three/KnotObject";
+import { CubeObject } from "../three/CubeObject";
 import s from "./Overview.module.css";
 
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -12,9 +11,9 @@ export function Overview() {
   return (
     <section id={sec.id} data-zl="" data-sec={sec.sec} data-screen-label={sec.screen} data-r="ov" className={s.overview}>
       <div className={s.stage}>
-        <div data-r="knot" className={s.knot}>
-          <div aria-hidden="true" className={s.knotGlow} />
-          <KnotObject rim={color.accent} />
+        <div data-r="stage" className={s.stageBox}>
+          <div aria-hidden="true" className={s.stageGlow} />
+          <CubeObject />
           {/* The engine rewrites the first text node as blocks scroll past. */}
           <div data-detnum="" className={cx(type.label, s.counter)}>
             {`${pad(1)} `}

@@ -1,6 +1,6 @@
 import type Lenis from "lenis";
 import type { MotionSettings } from "@/config/motion";
-import { ease, expoOut, legacyEase } from "@/design-system/tokens";
+import { color, ease, expoOut, legacyEase } from "@/design-system/tokens";
 import { sealText } from "@/design-system/primitives";
 import { startReveals } from "./reveal";
 
@@ -22,14 +22,17 @@ import { startReveals } from "./reveal";
  *  [data-screen-label]                    cursor zone label lookup
  *  [data-cursor="LABEL"]                  cursor label override
  *  [data-magnet]                          element follows the pointer
- *  [data-ovx]                             capability block (drives knot pose)
+ *  [data-ovx]                             capability block (drives the stage object's pose)
  *  [data-hname] [data-hfade] [data-hl] …  hero pieces
- *  [data-pre] [data-cut] [data-toast] [data-comet] [data-vncursor]  overlays
+ *  [data-pre] [data-cut] [data-toast] [data-comet] [data-grain] [data-vncursor]  overlays
  */
 
-export type KnotHandle = { el: HTMLElement; orient: number[]; lean: number[] };
+/** The 3D object on the "What I do" stage: scroll sets its pose, the pointer its lean. */
+export type StageHandle = { el: HTMLElement; orient: number[]; lean: number[] };
 
 type Pointer = { x: number; y: number };
+type Grain = { x: number; y: number; vx: number; vy: number; life: number; max: number; r: number; tw: number; hue: boolean };
+type Fx = { y?: number; vel: number; idle: boolean; last: number; masks: HTMLElement[]; sections: { el: HTMLElement; kids: HTMLElement | null; p?: number }[] };
 type Box = { top: number; h: number };
 type ScrollCache = {
   t: number;
@@ -42,10 +45,8 @@ type ScrollCache = {
   navsec: HTMLElement | null;
   navbar: HTMLElement | null;
   para: HTMLElement | null;
-  mark: HTMLElement | null;
-  foot: HTMLElement | null;
   /** Page-space geometry, measured once per cache so scrolling never forces layout. */
-  geo?: { secs: Box[]; ovx: Box[]; para: Box | null; foot: Box | null; max: number };
+  geo?: { secs: Box[]; ovx: Box[]; para: Box | null; max: number };
 };
 
 export type EngineOptions = {
@@ -64,22 +65,25 @@ export class MotionEngine {
   private o: EngineOptions;
   lenis: Lenis | null = null;
   menuOpen = false;
-  knot: KnotHandle | null = null;
+  stage: StageHandle | null = null;
 
-  /** The knot registers itself so scroll can drive its pose. Returns an unregister fn. */
-  registerKnot(h: KnotHandle) {
-    this.knot = h;
+  /** The stage object registers itself so scroll can drive its pose. Returns an unregister fn. */
+  registerStage(h: StageHandle) {
+    this.stage = h;
     return () => {
-      if (this.knot === h) this.knot = null;
+      if (this.stage === h) this.stage = null;
     };
   }
 
   private raf = 0;
   private timers: Record<string, ReturnType<typeof setTimeout> | undefined> = {};
   private ptr: Pointer | null = null;
+  private pvx = 0;
+  private pvy = 0;
   private pMoveT = 0;
   private ptrMoved = false;
   private ptrOut = false;
+  private overLens = false;
   private overLink = false;
   private lastHit: Element | null = null;
   private labelHold = 0;
@@ -88,12 +92,19 @@ export class MotionEngine {
   private introLock = false;
   private cutting = false;
   private lastSY: number | undefined;
+  private lastScrollT = 0;
+  /** Plays reveals whose trigger line has been crossed (reveal.ts). */
+  private revCheck: (() => void) | null = null;
   private frame = 0;
   private cache: ScrollCache | null = null;
   private curSec: string | undefined;
   private detK: number | undefined;
   private cMode: string | undefined;
   private leanRect: DOMRect | null = null;
+  private lens: { x: number; y: number; vx: number; vy: number; s: number; seen: boolean } | null = null;
+  private grains: Grain[] = [];
+  private gDirty = false;
+  private fx: Fx | null = null;
   private trail: Pointer[] = [];
   private cometDirty = false;
   private cleanup: (() => void)[] = [];
@@ -110,6 +121,9 @@ export class MotionEngine {
   }
   private fine() {
     return matchMedia("(pointer:fine)").matches;
+  }
+  private lensOn() {
+    return this.o.settings.lensHover && this.motionOn() && this.fine();
   }
   private cursorOn() {
     return this.o.settings.sealCursor && this.fine();
@@ -221,12 +235,19 @@ export class MotionEngine {
   /* ---------------- lifecycle ---------------- */
   mount() {
     const on = this.motionOn();
+    if (this.lensOn()) this.buildLensMap();
     if (on) qsa("[data-w]").forEach((w) => (w.style.opacity = ".16"));
-    if (on) this.cleanup.push(startReveals());
+    if (on) {
+      const rv = startReveals();
+      this.revCheck = rv.check;
+      this.cleanup.push(() => {
+        rv.stop();
+        this.revCheck = null;
+      });
+    }
     this.runIntro();
     if (on) {
       this.animate(qs("[data-pulse]"), [{ transform: "scale(1)", opacity: 0.7 }, { transform: "scale(3.2)", opacity: 0 }], { duration: 2200, iterations: Infinity, easing: legacyEase.out });
-      this.animate(qs("[data-bob]"), [{ transform: "translateY(-3px)" }, { transform: "translateY(5px)" }], { duration: 1400, iterations: Infinity, direction: "alternate", easing: "ease-in-out" });
     }
 
     const c = { x: innerWidth / 2, y: innerHeight / 2, tx: innerWidth / 2, ty: innerHeight / 2, s: 0.5, ts: 0.5, seen: false };
@@ -234,7 +255,11 @@ export class MotionEngine {
 
     const onMove = (e: PointerEvent) => {
       this.ptrOut = false;
-      if (this.ptr) this.pMoveT = performance.now();
+      if (this.ptr) {
+        this.pvx = e.clientX - this.ptr.x;
+        this.pvy = e.clientY - this.ptr.y;
+        this.pMoveT = performance.now();
+      }
       c.tx = e.clientX;
       c.ty = e.clientY;
       this.ptr = { x: e.clientX, y: e.clientY };
@@ -246,8 +271,9 @@ export class MotionEngine {
       }
       const t = e.target as Element;
       const closest = (s: string) => (t && t.closest ? t.closest<HTMLElement>(s) : null);
+      this.overLens = !!closest("[data-hname]") && this.lensOn();
       this.overLink = !!closest("a,button");
-      c.ts = closest("a,button,[data-cursor]") ? 0.85 : 0.5;
+      c.ts = this.overLens ? 1 : closest("a,button,[data-cursor]") ? 0.85 : 0.5;
       const m = closest("[data-magnet]");
       if (this.mag && this.mag !== m) {
         this.mag.style.transform = "";
@@ -321,13 +347,19 @@ export class MotionEngine {
       const sy = this.lenis ? this.lenis.scroll : scrollY;
       const moved = sy !== this.lastSY;
       this.lastSY = sy;
+      if (moved) this.lastScrollT = performance.now();
       this.frame++;
+      this.stepFx(sy);
+      this.revCheck?.();
       if (moved || this.frame % 20 === 0) this.stepScroll(sy);
       if (this.ptr && (this.ptrMoved || (moved && this.frame % 6 === 0))) {
         this.ptrMoved = false;
         const t = document.elementFromPoint(this.ptr.x, this.ptr.y);
         // Content scrolling under a still pointer changes what it is over.
-        if (t !== this.lastHit) this.overLink = !!(t && t.closest && t.closest("a,button"));
+        if (t !== this.lastHit) {
+          this.overLens = !!(t && t.closest && t.closest("[data-hname]")) && this.lensOn();
+          this.overLink = !!(t && t.closest && t.closest("a,button"));
+        }
         if (t !== this.lastHit || (this.labelHold && performance.now() > this.labelHold)) {
           this.lastHit = t;
           if (!this.labelHold || performance.now() > this.labelHold) {
@@ -337,7 +369,9 @@ export class MotionEngine {
         }
       }
       this.stepLean();
+      if (this.lensOn() || this.lens) this.stepLens();
       this.stepCursorParts();
+      if (this.lensOn() || this.grains.length) this.stepGrain();
       this.stepComet();
       const el = cursorEl();
       if (!el) return;
@@ -359,6 +393,14 @@ export class MotionEngine {
     Object.values(this.timers).forEach((t) => clearTimeout(t));
     this.anims.forEach((a) => a.cancel());
     this.anims = [];
+    if (this.fx) {
+      this.fx.masks.forEach((m) => (m.style.transform = m.style.willChange = ""));
+      this.fx.sections.forEach((x) => {
+        x.el.style.clipPath = "";
+        if (x.kids) x.kids.style.transform = "";
+      });
+      this.fx = null;
+    }
     cancelAnimationFrame(this.raf);
     this.raf = -1;
     this.lenis?.destroy();
@@ -444,8 +486,58 @@ export class MotionEngine {
   }
 
   /* ---------------- per-frame steps ---------------- */
+  /**
+   * Scroll-velocity effects: big headings skew with scroll speed, and "What I
+   * do" and Contact open out of an inset, rounded clip as they arrive. Goes
+   * idle (no measuring) once everything has settled.
+   */
+  private stepFx(sy: number) {
+    if (!this.motionOn()) return;
+    if (!this.fx)
+      this.fx = {
+        vel: 0,
+        idle: false,
+        last: 0,
+        masks: qsa("h2[data-split]").map((e) => e.parentElement!),
+        sections: qsa("#overview,#contact").map((el) => ({ el, kids: el.querySelector<HTMLElement>(":scope > [data-r=g3], :scope > div:last-child") })),
+      };
+    const F = this.fx;
+    const vh = innerHeight;
+    const v = sy - (F.y ?? sy);
+    F.y = sy;
+    const now = performance.now();
+    const dt = Math.min(0.05, Math.max(0.001, (now - (F.last || now)) / 1000));
+    F.last = now;
+    if (v === 0 && Math.abs(F.vel) < 0.05 && F.idle) return;
+    F.vel = Math.max(-50, Math.min(50, v)) + (F.vel - Math.max(-50, Math.min(50, v))) * Math.exp(-6 * dt);
+    const sk = Math.abs(F.vel) < 0.05 ? 0 : F.vel;
+    const skew = "skewY(" + Math.max(-2.5, Math.min(2.5, -sk * 0.05)).toFixed(3) + "deg)";
+    F.masks.forEach((m) => {
+      m.style.transform = sk ? skew : "";
+      m.style.willChange = sk ? "transform" : "";
+    });
+    let settled = Math.abs(F.vel) < 0.05;
+    const quint = (x: number) => x * x * x * (x * (x * 6 - 15) + 10);
+    F.sections.forEach((x) => {
+      const raw = Math.max(0, Math.min(1, (vh - x.el.getBoundingClientRect().top) / (vh * 0.9)));
+      const cur = x.p ?? raw;
+      x.p = Math.abs(cur - raw) < 0.001 ? raw : raw + (cur - raw) * Math.exp(-8 * dt);
+      if (x.p !== raw) settled = false;
+      const p = quint(x.p);
+      const inset = ((1 - p) * 7).toFixed(2) + "vw";
+      const round = ((1 - p) * 48).toFixed(1) + "px";
+      const clip = p >= 0.999 ? "" : `inset(0 ${inset} 0 ${inset} round ${round} ${round} 0 0)`;
+      if (x.el.style.clipPath !== clip) x.el.style.clipPath = clip;
+      if (x.kids) {
+        const tf = p >= 0.999 ? "" : "translate3d(0," + ((1 - p) * 12).toFixed(2) + "vh,0)";
+        if (x.kids.style.transform !== tf) x.kids.style.transform = tf;
+      }
+    });
+    F.idle = settled;
+  }
+
   private stepLean() {
-    const obj = this.knot;
+    const obj = this.stage;
     if (!obj) return;
     const blk = this.motionOn() && this.lastHit && this.lastHit.closest ? this.lastHit.closest("[data-ovx]") : null;
     let lx = 0;
@@ -459,6 +551,30 @@ export class MotionEngine {
       ly = Math.max(-0.4, Math.min(0.4, ((this.ptr.y - ky) / innerHeight) * 0.9));
     }
     obj.lean = [lx, ly];
+  }
+
+  private buildLensMap() {
+    const N = 200;
+    const cv = document.createElement("canvas");
+    cv.width = cv.height = N;
+    const ctx = cv.getContext("2d")!;
+    const img = ctx.createImageData(N, N);
+    const d = img.data;
+    for (let y = 0; y < N; y++)
+      for (let x = 0; x < N; x++) {
+        const dx = (x - N / 2) / (N / 2);
+        const dy = (y - N / 2) / (N / 2);
+        const r2 = dx * dx + dy * dy;
+        const i = (y * N + x) * 4;
+        const f = r2 < 1 ? Math.pow(1 - r2, 1.6) : 0;
+        d[i] = 128 - dx * f * 127;
+        d[i + 1] = 128 - dy * f * 127;
+        d[i + 2] = 128;
+        d[i + 3] = 255;
+      }
+    ctx.putImageData(img, 0, 0);
+    const im = qs("[data-lens-img]");
+    if (im) im.setAttribute("href", cv.toDataURL());
   }
 
   /** Soft smoke trail. Drawn at 1x and hidden entirely while idle. */
@@ -511,15 +627,134 @@ export class MotionEngine {
     }
   }
 
+  /** Copper grain shed by the hero lens. Hidden entirely while idle. */
+  private stepGrain() {
+    const cv = qs<HTMLCanvasElement>("[data-grain]");
+    if (!cv) return;
+    const P = this.grains;
+    const on = this.o.settings.goldGrain && this.lensOn();
+    const dpr = Math.min(devicePixelRatio || 1, 1.5);
+    const W = innerWidth;
+    const H = innerHeight;
+    if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) {
+      cv.width = Math.round(W * dpr);
+      cv.height = Math.round(H * dpr);
+    }
+    const ctx = cv.getContext("2d")!;
+    const fresh = this.pMoveT && performance.now() - this.pMoveT < 60;
+    if (on && this.overLens && this.ptr && fresh) {
+      const sp = Math.hypot(this.pvx, this.pvy);
+      const n = Math.min(5, Math.floor(sp / 7) + (Math.random() < 0.35 ? 1 : 0));
+      for (let k = 0; k < n && P.length < 160; k++) {
+        const a = Math.random() * Math.PI * 2;
+        const rr = Math.sqrt(Math.random()) * 64;
+        P.push({
+          x: this.ptr.x + Math.cos(a) * rr,
+          y: this.ptr.y + Math.sin(a) * rr,
+          vx: this.pvx * 0.06 + (Math.random() - 0.5) * 0.5,
+          vy: this.pvy * 0.04 - Math.random() * 0.5,
+          life: 0,
+          max: 70 + Math.random() * 70,
+          r: 0.5 + Math.random() * 1.2,
+          tw: Math.random() * 6,
+          hue: Math.random() < 0.3,
+        });
+      }
+    }
+    if (!P.length) {
+      if (this.gDirty) {
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, cv.width, cv.height);
+        this.gDirty = false;
+        cv.style.display = "none";
+      }
+      return;
+    }
+    if (cv.style.display !== "block") cv.style.display = "block";
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, W, H);
+    this.gDirty = true;
+    for (let k = P.length - 1; k >= 0; k--) {
+      const p = P[k];
+      p.life++;
+      p.vy += 0.028;
+      p.vx *= 0.985;
+      p.vy *= 0.985;
+      p.x += p.vx;
+      p.y += p.vy;
+      if (p.life > p.max || p.y > H + 10) {
+        P.splice(k, 1);
+        continue;
+      }
+      const t = p.life / p.max;
+      const a = (t < 0.15 ? t / 0.15 : 1 - (t - 0.15) / 0.85) * (0.55 + 0.45 * Math.sin(p.tw + p.life * 0.25));
+      ctx.globalAlpha = Math.max(0, a);
+      ctx.fillStyle = p.hue ? color.accentGlint : color.accent;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, 6.2832);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
   private stepCursorParts() {
     const bg = qs("[data-cbg]");
     const dc = qs("[data-cdisc]");
-    const hollow = this.overLink;
+    const hollow = !!((this.overLens && this.ptr) || this.overLink);
     const m = hollow ? "1" : "0";
     if (this.cMode === m) return;
     this.cMode = m;
     if (bg) bg.style.background = hollow ? "rgba(17,17,17,0)" : "rgba(17,17,17,.72)";
     if (dc) dc.style.transform = hollow ? "scale(0)" : "none";
+  }
+
+  /** Liquid lens over the hero name. Drops out while the page scrolls. */
+  private stepLens() {
+    const el = qs("[data-hname]");
+    if (!el) return;
+    const disp = qs<SVGElement>("[data-lens-disp]");
+    const im = qs<SVGElement>("[data-lens-img]");
+    const L = this.lens || (this.lens = { x: 0, y: 0, vx: 0, vy: 0, s: 0, seen: false });
+    const scrolling = performance.now() - this.lastScrollT < 220;
+    const active = this.overLens && this.ptr && !scrolling;
+    if (active) {
+      const r = el.getBoundingClientRect();
+      const k = r.width / Math.max(1, el.offsetWidth);
+      const tx = (this.ptr!.x - r.left) / k;
+      const ty = (this.ptr!.y - r.top) / k;
+      if (!L.seen || L.s < 0.02) {
+        L.x = tx;
+        L.y = ty;
+        L.vx = L.vy = 0;
+        L.seen = true;
+      }
+      L.vx = (L.vx + (tx - L.x) * 0.16) * 0.7;
+      L.vy = (L.vy + (ty - L.y) * 0.16) * 0.7;
+      L.x += L.vx;
+      L.y += L.vy;
+    }
+    L.s += ((active ? 1 : 0) - L.s) * (active ? 0.09 : 0.14);
+    if ((L.s < 0.01 && !active) || (scrolling && L.s < 0.35)) {
+      if (scrolling) L.s = 0;
+      if (el.style.filter) el.style.filter = "";
+      if (disp) disp.setAttribute("scale", "0");
+      return;
+    }
+    if (!el.style.filter) el.style.filter = "url(#vnLens)";
+    const ax = Math.min(0.45, Math.abs(L.vx) / 26);
+    const ay = Math.min(0.45, Math.abs(L.vy) / 26);
+    const base = 255;
+    const w = base * (1 + ax - ay * 0.4);
+    const hh = base * (1 + ay - ax * 0.4);
+    const t = performance.now() / 1000;
+    const breathe = 1 + Math.sin(t * 2.4) * 0.04;
+    if (im) {
+      im.setAttribute("x", (L.x - w / 2).toFixed(1));
+      im.setAttribute("y", (L.y - hh / 2).toFixed(1));
+      im.setAttribute("width", w.toFixed(1));
+      im.setAttribute("height", hh.toFixed(1));
+    }
+    if (disp) disp.setAttribute("scale", (L.s * (96 + Math.min(60, Math.hypot(L.vx, L.vy) * 1.8)) * breathe).toFixed(1));
   }
 
   private stepScroll(sy: number) {
@@ -539,8 +774,6 @@ export class MotionEngine {
             navsec: qs("[data-navsec]"),
             navbar: qs("[data-navbar]"),
             para: qs("[data-words]"),
-            mark: qs("[data-mark]"),
-            foot: document.getElementById("contact"),
           });
     if (!C.geo) {
       const Y = (el: HTMLElement): Box => {
@@ -551,7 +784,6 @@ export class MotionEngine {
         secs: C.secs.map(Y),
         ovx: C.ovx.map(Y),
         para: C.para ? Y(C.para) : null,
-        foot: C.foot ? Y(C.foot) : null,
         max: Math.max(1, document.documentElement.scrollHeight - vh),
       };
     }
@@ -596,11 +828,6 @@ export class MotionEngine {
       });
     }
 
-    if (C.mark && G.foot && on) {
-      const p = Math.min(1, Math.max(0, (vh - (G.foot.top - sy)) / G.foot.h));
-      C.mark.style.transform = `translate3d(0,${((1 - p) * 60).toFixed(2)}%,0)`;
-    }
-
     let k = 0;
     let bd = Infinity;
     G.ovx.forEach((g, j) => {
@@ -613,7 +840,7 @@ export class MotionEngine {
       }
     });
     if (bd === Infinity) k = 0;
-    if (this.knot) this.knot.orient = this.o.orients[k];
+    if (this.stage) this.stage.orient = this.o.orients[k];
     if (C.num && k !== this.detK) {
       this.detK = k;
       C.num.firstChild!.textContent = String(k + 1).padStart(2, "0") + " ";

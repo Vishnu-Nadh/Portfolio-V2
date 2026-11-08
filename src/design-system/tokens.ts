@@ -15,14 +15,16 @@ export const color = {
   lineMuted: "#262626",
   lineStrong: "#2c2c2b",
   rule: "#3a3a39",
-  textGhost: "#4a4a48",
-  textDim: "#6e6e6c",
+  textGhost: "#7c7c7a",
+  textDim: "#8f8f8d",
   textMuted: "#8a8a88",
   textSoft: "#a6a6a4",
+  textLead: "#c0c0be",
   text: "#d0d0ce",
   textStrong: "#e6e6e4",
   accent: "#c8875a",
   accentPressed: "#8a6248",
+  accentGlint: "#f0cfa6",
   error: "#d97a5e",
 } as const;
 
@@ -45,6 +47,13 @@ export const ease = {
   fade: "cubic-bezier(.33,1,.68,1)",
   /** Cubic in — ticker exit. */
   in: "cubic-bezier(.32,0,.67,0)",
+} as const;
+
+/** Scroll-reveal curves: rises, rule draws, fades. */
+export const reveal = {
+  out: "cubic-bezier(.19,1,.22,1)",
+  line: "cubic-bezier(.65,0,.35,1)",
+  fade: "cubic-bezier(.25,1,.5,1)",
 } as const;
 
 /** The design's earlier curves, still used by the menu cut, "thank you" rise and pulse dot. */

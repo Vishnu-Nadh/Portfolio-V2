@@ -1,19 +1,21 @@
 "use client";
 
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FocusEvent, type FormEvent, type MouseEvent } from "react";
 import { contact } from "@/content/site";
 import { Mask, SectionTag, primitives, type, underlineClass } from "@/design-system/primitives";
 import { color } from "@/design-system/tokens";
 import { emptyContact, validateContact, type ContactFields } from "@/lib/contact";
 import { cx } from "@/lib/cx";
 import { useMotion } from "@/lib/motion/MotionProvider";
-import { SignalObject } from "../three/SignalObject";
+import { KnotObject, type KnotApi } from "../three/KnotObject";
 import s from "./Contact.module.css";
 
 type Status = "idle" | "sending" | "sent";
 type Key = "name" | "email" | "msg";
 
 const SEND_MIN_MS = 1200;
+/** Knot focus pose per form field (by input name). Topic chips and buttons return it to rest. */
+const FIELD_POSE: Record<string, number> = { name: 0, email: 1, message: 2 };
 
 export function ContactNote() {
   const { engine } = useMotion();
@@ -27,6 +29,8 @@ export function ContactNote() {
   const msgRef = useRef<HTMLTextAreaElement>(null);
   const signalRef = useRef<HTMLDivElement>(null);
   const formRow = useRef<HTMLDivElement>(null);
+  const knot = useRef<KnotApi>(null);
+  const typed = useRef(false);
 
   const F = contact.form;
   const e = validateContact(f);
@@ -38,10 +42,32 @@ export function ContactNote() {
   const set = (k: keyof ContactFields, v: string) => setFields((p) => ({ ...p, [k]: v }));
   const touch = (k: Key) => setTouched((t) => ({ ...t, [k]: true }));
 
+  // The knot swells a little whenever the note's text changes (not on first render).
+  useEffect(() => {
+    if (typed.current) knot.current?.pulse();
+    typed.current = true;
+  }, [f.name, f.email, f.msg]);
+
+  /* Knot reactions: turn toward the focused field, rest when focus leaves the form, kick on button presses. */
+  const onFormFocus = (ev: FocusEvent<HTMLFormElement>) => {
+    const name = (ev.target as Element).getAttribute("name") ?? "";
+    knot.current?.focus(FIELD_POSE[name] ?? -1);
+  };
+  const onFormBlur = (ev: FocusEvent<HTMLFormElement>) => {
+    const form = ev.currentTarget;
+    setTimeout(() => {
+      if (!form.contains(document.activeElement)) knot.current?.focus(-1);
+    }, 0);
+  };
+  const onFormClick = (ev: MouseEvent<HTMLFormElement>) => {
+    if ((ev.target as Element).closest("button")) knot.current?.tap();
+  };
+
   async function submit(ev: FormEvent) {
     ev.preventDefault();
     if (sending) return;
     if (Object.keys(e).length) {
+      knot.current?.reject();
       setTried(true);
       const first = (["name", "email", "msg"] as Key[]).find((k) => e[k]);
       ({ name: nameRef, email: emailRef, msg: msgRef })[first!].current?.focus();
@@ -92,7 +118,7 @@ export function ContactNote() {
       <SectionTag data-reveal="" title={contact.noteTag.title} index={contact.noteTag.index} className={s.noteTag} />
 
       {status !== "sent" && (
-        <form onSubmit={submit} noValidate aria-label="Contact form" className={s.form}>
+        <form onSubmit={submit} onFocus={onFormFocus} onBlur={onFormBlur} onClick={onFormClick} noValidate aria-label="Contact form" className={s.form}>
           <div data-reveal="" data-d="100" className={s.pair}>
             <label className={s.field}>
               <span className={cx(type.label, s.fieldLabel)}>{F.name.label}</span>
@@ -207,7 +233,7 @@ export function ContactNote() {
 
       <div ref={signalRef} data-r="signal" className={s.signal}>
         <div aria-hidden="true" className={s.signalGlow} />
-        <SignalObject filled={filled} sent={status === "sent" || sending} rim={color.accent} />
+        <KnotObject ref={knot} filled={filled} sent={status === "sent" || sending} rim={color.accent} />
         <div data-r="siglabel" className={cx(type.label, s.signalLabel)}>{signalLabel}</div>
       </div>
     </div>

@@ -16,7 +16,17 @@ export function Hero() {
   return (
     <header id={sec.id} data-sec={sec.sec} data-screen-label={sec.screen} className={s.hero}>
 
-      <div data-hname="" className={s.name}>
+      {/* Displacement lens over the name; the engine moves the map and scale. */}
+      <svg aria-hidden="true" width="0" height="0" className={s.defs}>
+        <filter id="vnLens" x="-10%" y="-20%" width="120%" height="140%" primitiveUnits="userSpaceOnUse" colorInterpolationFilters="sRGB">
+          <feFlood floodColor="rgb(128,128,128)" result="neutral" />
+          <feImage data-lens-img="" x="0" y="0" width="180" height="180" preserveAspectRatio="none" result="lensmap" />
+          <feComposite in="lensmap" in2="neutral" operator="over" result="map" />
+          <feDisplacementMap data-lens-disp="" in="SourceGraphic" in2="map" scale="0" xChannelSelector="R" yChannelSelector="G" />
+        </filter>
+      </svg>
+
+      <div data-hname="" data-cursor={hero.cursor} className={s.name}>
         <div className={s.heyMask}>
           <div data-hhey="" className={cx(type.label, s.hey)}>
             {hero.greeting}

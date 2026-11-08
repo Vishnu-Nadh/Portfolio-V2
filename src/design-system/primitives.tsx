@@ -8,13 +8,13 @@ export { p as primitives, type };
 /* ------------------------------------------------------------------ */
 /* SectionTag — "TITLE / accent index" stacked micro label             */
 /* ------------------------------------------------------------------ */
-type SectionTagProps = { title: string; index: string } & HTMLAttributes<HTMLDivElement>;
+type SectionTagProps = { title: string; index: string; /** Title and index on one line. */ inline?: boolean } & HTMLAttributes<HTMLDivElement>;
 
-export function SectionTag({ title, index, className, ...rest }: SectionTagProps) {
+export function SectionTag({ title, index, inline, className, ...rest }: SectionTagProps) {
   return (
     <div className={cx(type.label, className)} {...rest}>
       {title}
-      <br />
+      {inline ? " " : <br />}
       <span className={type.accent}>{index}</span>
     </div>
   );
@@ -37,6 +37,33 @@ export function Mask({ pad = "display", as: Tag = "div", className, children }: 
     <Tag data-pad={pad} className={cx(p.mask, Tag === "span" && p.maskBlock, className)}>
       {children}
     </Tag>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* SplitText — letters as spans; pair with data-split on the rising el */
+/* Assistive tech reads the whole text, not the letters.               */
+/* ------------------------------------------------------------------ */
+export function SplitText({ children }: { children: string }) {
+  return (
+    <>
+      <span className={p.srOnly}>{children}</span>
+      <span aria-hidden="true">
+        {children.split(/(\s+)/).map((w, i) =>
+          !w ? null : /^\s+$/.test(w) ? (
+            w
+          ) : (
+            <span key={i} className={p.word}>
+              {[...w].map((ch, j) => (
+                <span key={j} data-ch="" className={p.ch}>
+                  {ch}
+                </span>
+              ))}
+            </span>
+          ),
+        )}
+      </span>
+    </>
   );
 }
 

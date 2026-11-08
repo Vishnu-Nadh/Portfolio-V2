@@ -1,9 +1,10 @@
 import { intro, sections } from "@/content/site";
-import { Mask, Rule, SectionTag, primitives, type } from "@/design-system/primitives";
+import { Mask, SectionTag, primitives } from "@/design-system/primitives";
 import { cx } from "@/lib/cx";
 import { RichText } from "../RichText";
 import s from "./Intro.module.css";
 
+/** Statement, then the summary beside a copper dash. data-seq="intro" plays them as one chain. */
 export function Intro() {
   const sec = sections.intro;
   return (
@@ -13,26 +14,19 @@ export function Intro() {
         <div className={s.lead}>
           {intro.lines.map((line, i) => (
             <Mask key={i} pad="line">
-              <div data-rise="" data-d={i ? i * 120 : undefined} className={cx(line.muted && s.muted)}>
-                <RichText parts={line.text} />
+              <div data-rise="" data-split="" data-seq="intro" className={cx(line.muted && s.muted)}>
+                <RichText parts={line.text} split />
               </div>
             </Mask>
           ))}
+          <div className={s.summaryRow}>
+            <div data-line="" data-seq="intro" aria-hidden="true" className={s.dash} />
+            <p data-reveal="" data-seq="intro" className={s.summary}>
+              {intro.summary}
+            </p>
+          </div>
         </div>
         <div />
-      </div>
-      <div data-r="g3" className={cx(primitives.grid3, s.row, s.foot)}>
-        <Rule />
-        <a href={intro.scroll.href} data-cursor={intro.scroll.cursor} data-reveal="" data-d="200" className={cx(type.label, s.scroll)}>
-          <span data-bob="" className={s.arrow}>
-            ↓
-          </span>
-          {intro.scroll.label}
-        </a>
-        <div />
-        <p data-reveal="" data-d="300" className={cx(type.body, s.summary)}>
-          {intro.summary}
-        </p>
       </div>
     </section>
   );

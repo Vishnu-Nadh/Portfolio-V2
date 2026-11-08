@@ -1,18 +1,18 @@
 import { Fragment } from "react";
-import { type } from "@/design-system/primitives";
+import { SplitText, type } from "@/design-system/primitives";
 
 export type RichPart = string | { accent: string };
 
-/** Renders content runs, wrapping `{ accent }` runs in the accent colour. */
-export function RichText({ parts }: { parts: RichPart[] }) {
+/** Renders content runs, wrapping `{ accent }` runs in the accent colour. `split` renders them letter by letter. */
+export function RichText({ parts, split }: { parts: RichPart[]; split?: boolean }) {
   return (
     <>
       {parts.map((p, i) =>
         typeof p === "string" ? (
-          <Fragment key={i}>{p}</Fragment>
+          <Fragment key={i}>{split ? <SplitText>{p}</SplitText> : p}</Fragment>
         ) : (
           <span key={i} className={type.accent}>
-            {p.accent}
+            {split ? <SplitText>{p.accent}</SplitText> : p.accent}
           </span>
         ),
       )}

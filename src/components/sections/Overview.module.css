@@ -7,14 +7,14 @@
 
 .stage { position: relative; }
 
-.knot {
+.stageBox {
   position: sticky;
   top: 0;
   height: 100vh;
   min-height: 560px;
 }
 
-.knotGlow {
+.stageGlow {
   position: absolute;
   inset: 0;
   background: radial-gradient(42% 38% at 50% 50%, rgba(200, 135, 90, .22) 0%, rgba(140, 74, 34, .12) 40%, rgba(0, 0, 0, 0) 75%);
@@ -32,11 +32,11 @@
 
 .top {
   box-sizing: border-box;
-  padding: clamp(150px, 20vh, 200px) var(--gutter) 0 0;
+  padding: clamp(160px, 24vh, 260px) var(--gutter) 0 0;
 }
 
 .details {
-  padding: 0 var(--gutter) clamp(120px, 16vh, 180px) 0;
+  padding: 0 var(--gutter) clamp(160px, 22vh, 260px) 0;
   display: flex;
   flex-direction: column;
 }

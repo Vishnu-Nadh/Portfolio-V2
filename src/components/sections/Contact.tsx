@@ -1,5 +1,5 @@
-import { contact, footer, profile, sections, site, socials } from "@/content/site";
-import { Mask, Monogram, Rule, SectionTag, UnderlineLink, primitives, type, underlineClass } from "@/design-system/primitives";
+import { contact, footer, profile, sections, socials } from "@/content/site";
+import { Mask, Monogram, Rule, SectionTag, SplitText, UnderlineLink, primitives, type, underlineClass } from "@/design-system/primitives";
 import { cx } from "@/lib/cx";
 import { Clock } from "../Clock";
 import { ContactNote } from "./ContactNote";
@@ -13,13 +13,13 @@ export function Contact() {
         <SectionTag data-reveal="" title={sec.title} index={sec.index} className={s.tag} />
         <h2 className={cx(type.display, s.heading)}>
           <Mask as="span" pad="display">
-            <span data-rise="" className={s.block}>
-              {contact.heading.first}
+            <span data-rise="" data-split="" className={s.block}>
+              <SplitText>{contact.heading.first}</SplitText>
             </span>
           </Mask>
           <Mask as="span" pad="display">
-            <span data-rise="" data-d="120" className={s.outline}>
-              {contact.heading.second}
+            <span data-rise="" data-split="" data-d="120" className={s.outline}>
+              <SplitText>{contact.heading.second}</SplitText>
             </span>
           </Mask>
         </h2>
@@ -57,12 +57,6 @@ export function Contact() {
           <span className={type.accent}>{footer.backToTop.accent}</span>
           {footer.backToTop.after}
         </UnderlineLink>
-      </div>
-
-      <div aria-hidden="true" className={s.watermarkMask}>
-        <div data-mark="" className={s.watermark}>
-          {site.watermark}
-        </div>
       </div>
     </footer>
   );

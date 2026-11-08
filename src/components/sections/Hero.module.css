@@ -12,6 +12,12 @@
 }
 
 
+.defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+
 .name {
   position: relative;
   display: flex;
@@ -118,6 +124,11 @@
 .social,
 .social:hover {
   display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px; /* touch target; the margin keeps the icon spacing */
+  height: 44px;
+  margin: -13px;
   color: var(--c-text-muted);
   transition: color .3s, transform .5s var(--ease-out);
 }

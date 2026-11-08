@@ -1,50 +1,118 @@
-import { ease } from "@/design-system/tokens";
+import { reveal } from "@/design-system/tokens";
 import { isDisplayFace } from "./displayFace";
 
 /**
- * Scroll reveals and count-ups. Elements are parked off-state once, then an
- * IntersectionObserver hands each one a CSS transition when it enters. A slow
- * poll ("safety net") catches anything the observer misses (fast jumps,
- * layout shifts) and stops itself once everything has played.
+ * Scroll reveals and count-ups. Elements are parked off-state once; each one
+ * plays (a CSS transition) when its top crosses one trigger line. The engine
+ * calls `check` every frame, and a slow poll keeps it going while rAF is
+ * paused (background tab), stopping once everything has played.
+ *
+ * Kinds: [data-rise] masked rise ([data-split] rises letter by letter),
+ * [data-line] rule draw, [data-reveal] fade + lift + slight blur (small labels
+ * also scramble into place). [data-seq="name"] chains a group: when any member
+ * triggers, the whole group plays in DOM order, each starting halfway through
+ * the previous one.
  */
 
-type Tuning = { rise: number; fade: number; fy: number; line: number; wt: number; ls?: number };
+/** One motion system, one duration scale (ms): glyph rise + ≤`spread` letter spread, line draw, block fade (`fy` lift); stagger ≤`dmax`. */
+const M = { cs: 30, spread: 360, rise: 900, fade: 700, fy: 9, line: 900, wt: 1100, ls: 60, dmax: 480 };
+/** Reveals and counters play once their top passes this fraction of the viewport height. */
+const TRIGGER = 0.78;
+
 type Kind = "rise" | "line" | "fade";
-type RevealEl = HTMLElement & { _cfg?: { kind: Kind; C: Tuning; d: number }; _rv?: RevealEl[] };
+type RevealEl = HTMLElement & { _cfg?: { kind: Kind; d: number }; _rv?: RevealEl[]; _scr?: boolean; _cs?: number; _done?: boolean };
 type CountEl = HTMLElement & { _ct?: ReturnType<typeof setInterval> };
 
-/** Durations (ms) and fade distance (px) per section id; `ls` staggers rules. */
-const TUNING: Record<string, Tuning> = {
-  intro: { rise: 1700, fade: 1300, fy: 32, line: 1800, wt: 2200 },
-  overview: { rise: 1400, fade: 1100, fy: 24, line: 1400, wt: 1800 },
-  impact: { rise: 1500, fade: 1100, fy: 18, line: 1600, wt: 2000 },
-  work: { rise: 1400, fade: 1000, fy: 20, line: 1500, wt: 1800, ls: 100 },
-  about: { rise: 1400, fade: 1200, fy: 16, line: 1400, wt: 1800 },
-  contact: { rise: 1700, fade: 1100, fy: 24, line: 1800, wt: 2200 },
-  _: { rise: 1400, fade: 1100, fy: 24, line: 1500, wt: 1800 },
-};
-
 const kindOf = (el: Element): Kind => (el.hasAttribute("data-rise") ? "rise" : el.hasAttribute("data-line") ? "line" : "fade");
-const targetOf = (el: HTMLElement) => (kindOf(el) === "rise" ? el.parentElement! : el);
+const targetOf = (el: HTMLElement) => (kindOf(el) === "rise" ? el.parentElement! : el) as RevealEl;
+const charsOf = (el: Element) => (el.hasAttribute("data-split") ? [...el.querySelectorAll<HTMLElement>("[data-ch]")] : null);
+
+/** Types a short label into place through random glyphs. */
+function scramble(el: HTMLElement) {
+  const G = "ABCDEFGHJKLMNPRSTUVWXYZ0123456789/#+=";
+  const nodes: { n: Text; v: string; last: string | null }[] = [];
+  const tw = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+  while (tw.nextNode()) {
+    const n = tw.currentNode as Text;
+    if (n.nodeValue!.trim()) nodes.push({ n, v: n.nodeValue!, last: null });
+  }
+  if (!nodes.length) return;
+  const t0 = performance.now();
+  const step = () => {
+    const p = Math.min(1, (performance.now() - t0) / 500);
+    nodes.forEach((o) => {
+      if (o.last !== null && o.n.nodeValue !== o.last) return;
+      const keep = Math.floor(o.v.length * p);
+      const s =
+        p >= 1
+          ? o.v
+          : o.v.slice(0, keep) +
+            [...o.v.slice(keep)].map((ch) => (/\s|—|\//.test(ch) ? ch : G[(Math.random() * G.length) | 0])).join("");
+      o.n.nodeValue = s;
+      o.last = s;
+    });
+    if (p < 1) requestAnimationFrame(step);
+  };
+  step();
+}
 
 function play(el: RevealEl) {
   const c = el._cfg;
   if (!c || el.dataset.rv === "in") return;
   el.dataset.rv = "in";
-  const { kind, C, d } = c;
+  const { kind, d } = c;
   void el.offsetWidth; // commit the parked state before transitioning
-  if (kind === "rise") {
-    el.style.transition = `transform ${C.rise}ms ${ease.out} ${d}ms` + (el.dataset.wt0 ? `, font-weight ${C.wt}ms ${ease.out} ${d + 100}ms` : "");
+  const chars = kind === "rise" ? charsOf(el) : null;
+  if (chars) {
+    const cs = Math.min(M.cs, M.spread / Math.max(1, chars.length));
+    el._cs = cs;
+    chars.forEach((ch, i) => {
+      const dl = d + Math.round(i * cs);
+      ch.style.transition = `transform ${M.rise}ms ${reveal.out} ${dl}ms, opacity ${Math.round(M.rise * 0.45)}ms ${reveal.fade} ${dl}ms`;
+      ch.style.transform = "none";
+      ch.style.opacity = "1";
+    });
+    setTimeout(
+      () =>
+        chars.forEach((ch) => {
+          ch.style.willChange = "";
+          ch.style.transition = "";
+        }),
+      d + chars.length * cs + M.rise + 400,
+    );
+  } else if (kind === "rise") {
+    el.style.transition = `transform ${M.rise}ms ${reveal.out} ${d}ms` + (el.dataset.wt0 ? `, font-weight ${M.wt}ms ${reveal.out} ${d + 100}ms` : "");
     el.style.transform = "none";
     if (el.dataset.wt0) el.style.fontWeight = el.dataset.wt0;
   } else if (kind === "line") {
-    el.style.transition = `transform ${C.line}ms ${ease.inOutStrong} ${d}ms`;
+    el.style.transition = `transform ${M.line}ms ${reveal.line} ${d}ms`;
     el.style.transform = "none";
   } else {
-    el.style.transition = `opacity ${C.fade}ms ${ease.fade} ${d}ms, transform ${C.fade + 150}ms ${ease.out} ${d}ms`;
+    el.style.transition = `opacity ${M.fade}ms ${reveal.fade} ${d}ms, transform ${M.fade + 150}ms ${reveal.out} ${d}ms, filter ${Math.round(M.fade * 0.8)}ms ${reveal.fade} ${d}ms`;
     el.style.opacity = "";
     el.style.transform = "none";
+    el.style.filter = "blur(0)";
+    setTimeout(() => {
+      el.style.filter = "";
+      el.style.willChange = "";
+      el.style.transition = "";
+    }, d + M.fade + 400);
+    if (el._scr) setTimeout(() => scramble(el), d);
   }
+}
+
+/** Plays `el`, or its whole [data-seq] group as a chain. */
+function playSeq(el: RevealEl) {
+  const g = el.dataset.seq;
+  if (!g) return play(el);
+  let t = 0;
+  document.querySelectorAll<RevealEl>(`[data-seq="${g}"]`).forEach((x) => {
+    if (!x._cfg || x.dataset.rv === "in") return;
+    x._cfg.d = t;
+    targetOf(x)._done = true;
+    play(x);
+    t += Math.round(((charsOf(x)?.length ?? 0) * (x._cs || M.cs) + M.rise) * 0.5);
+  });
 }
 
 function runCount(el: CountEl) {
@@ -70,39 +138,38 @@ function runCount(el: CountEl) {
   el._ct = setInterval(step, 120);
 }
 
-/** Parks every reveal below the fold and starts observing. Returns a teardown. */
+/** Parks every reveal below the trigger line. Returns the per-frame check and a teardown. */
 export function startReveals() {
   const vh = innerHeight;
-  const io = new IntersectionObserver(
-    (ents) =>
-      ents.forEach((en) => {
-        if (!en.isIntersecting) return;
-        io.unobserve(en.target);
-        ((en.target as RevealEl)._rv || []).forEach(play);
-      }),
-    { rootMargin: "0px 0px -12% 0px" },
-  );
+  let revWait: RevealEl[] = [];
+  let cntWait: CountEl[] = [];
 
   const lineIdx: Record<string, number> = {};
   document.querySelectorAll<RevealEl>("[data-reveal],[data-rise],[data-line]").forEach((el) => {
     if (el.closest("[data-menu]") || el.dataset.rv) return;
     const kind = kindOf(el);
-    const tgt = targetOf(el) as RevealEl;
-    if (tgt.getBoundingClientRect().top < vh * 0.88) {
+    const tgt = targetOf(el);
+    if (tgt.getBoundingClientRect().top < vh * TRIGGER) {
       el.dataset.rv = "in";
       return;
     }
-    const sec = el.closest("section,header,footer");
-    const sid = (sec && sec.id) || "_";
-    const C = TUNING[sid] || TUNING._;
-    let d = parseInt(el.dataset.d!, 10) || 0;
-    if (kind === "line" && C.ls) {
+    let d = Math.min(M.dmax, Math.round((parseInt(el.dataset.d!, 10) || 0) * 0.6));
+    if (kind === "line") {
+      const sid = el.closest("section,header,footer")?.id || "_";
       lineIdx[sid] = (lineIdx[sid] || 0) + 1;
-      d += (lineIdx[sid] - 1) * C.ls;
+      d += Math.min(M.dmax, (lineIdx[sid] - 1) * M.ls);
     }
-    el._cfg = { kind, C, d };
+    el._cfg = { kind, d };
     el.style.transition = "none";
-    if (kind === "rise") {
+    const chars = kind === "rise" ? charsOf(el) : null;
+    if (chars) {
+      chars.forEach((ch, i) => {
+        ch.style.transition = "none";
+        ch.style.transform = `translate3d(0,110%,0) rotate(${i % 2 ? 7 : 4}deg) scaleY(1.25)`;
+        ch.style.opacity = "0";
+        ch.style.willChange = "transform,opacity";
+      });
+    } else if (kind === "rise") {
       el.style.transform = "translate3d(0,175%,0)";
       if (isDisplayFace(el)) {
         if (!el.dataset.wt0) el.dataset.wt0 = el.style.fontWeight || getComputedStyle(el).fontWeight || "600";
@@ -111,63 +178,69 @@ export function startReveals() {
     } else if (kind === "line") el.style.transform = "scaleX(0)";
     else {
       el.style.opacity = "0";
-      el.style.transform = `translate3d(0,${C.fy}px,0)`;
+      el.style.transform = `translate3d(0,${M.fy * 1.8}px,0)`;
+      el.style.filter = "blur(4px)";
+      el.style.willChange = "transform,opacity,filter";
+      el._scr = parseFloat(getComputedStyle(el).fontSize) <= 12 && el.textContent!.trim().length < 48 && !el.querySelector("input,textarea,button");
     }
     el.dataset.rv = "wait";
     tgt._rv = (tgt._rv || []).concat(el);
-    io.observe(tgt);
+    if (!revWait.includes(tgt)) revWait.push(tgt);
   });
 
-  const cio = new IntersectionObserver(
-    (ents) =>
-      ents.forEach((en) => {
-        if (!en.isIntersecting) return;
-        cio.unobserve(en.target);
-        runCount(en.target as CountEl);
-      }),
-    { rootMargin: "0px 0px -15% 0px" },
-  );
   document.querySelectorAll<CountEl>("[data-count]").forEach((el) => {
     if (el.getBoundingClientRect().top > vh * 0.85) {
       el.textContent = "0";
-      cio.observe(el);
+      cntWait.push(el);
     } else el.dataset.gc = "done";
   });
 
-  let net: ReturnType<typeof setInterval> | null = setInterval(() => {
-    const h = innerHeight;
-    let left = 0;
-    document.querySelectorAll<RevealEl>('[data-rv="wait"]').forEach((el) => {
-      left++;
-      const r = targetOf(el).getBoundingClientRect();
-      if (r.top < h * 0.92 && r.bottom > 0) play(el);
-    });
-    document.querySelectorAll<CountEl>("[data-count]").forEach((el) => {
-      if (el.dataset.gc) return;
-      left++;
-      const r = el.getBoundingClientRect();
-      if (r.top < h && r.bottom > 0) {
-        cio.unobserve(el);
+  const check = () => {
+    if (!revWait.length && !cntWait.length) return;
+    const H = innerHeight;
+    // Content below the line at the very bottom of the page can never cross it, so there anything on screen plays.
+    const line = scrollY + H >= document.documentElement.scrollHeight - 2 ? H : H * TRIGGER;
+    if (revWait.length) {
+      revWait
+        .filter((t) => !t._done && t.getBoundingClientRect().top < line)
+        .forEach((t) => {
+          t._done = true;
+          (t._rv || []).forEach(playSeq);
+        });
+      revWait = revWait.filter((t) => !t._done);
+    }
+    if (cntWait.length)
+      cntWait = cntWait.filter((el) => {
+        if (el.getBoundingClientRect().top >= line) return true;
         runCount(el);
-      }
-    });
-    if (!left && net) {
+        return false;
+      });
+  };
+
+  let net: ReturnType<typeof setInterval> | null = setInterval(() => {
+    check();
+    if (!revWait.length && !cntWait.length && net) {
       clearInterval(net);
       net = null;
     }
   }, 600);
 
-  return () => {
-    io.disconnect();
-    cio.disconnect();
+  const stop = () => {
     if (net) clearInterval(net);
+    revWait = [];
+    cntWait = [];
     // Undo parked state so a remount (React Strict Mode in dev) starts clean.
     document.querySelectorAll<RevealEl>('[data-rv="wait"]').forEach((el) => {
-      el.style.transition = el.style.transform = el.style.opacity = "";
+      el.style.transition = el.style.transform = el.style.opacity = el.style.filter = el.style.willChange = "";
       if (el.dataset.wt0) el.style.fontWeight = "";
+      charsOf(el)?.forEach((ch) => {
+        ch.style.transition = ch.style.transform = ch.style.opacity = ch.style.willChange = "";
+      });
       delete el.dataset.rv;
       delete el._cfg;
-      (targetOf(el) as RevealEl)._rv = undefined;
+      const tgt = targetOf(el);
+      tgt._rv = undefined;
+      tgt._done = undefined;
     });
     document.querySelectorAll<CountEl>("[data-count]").forEach((el) => {
       clearInterval(el._ct);
@@ -177,4 +250,6 @@ export function startReveals() {
       }
     });
   };
+
+  return { check, stop };
 }

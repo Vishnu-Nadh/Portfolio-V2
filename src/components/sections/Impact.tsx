@@ -1,5 +1,5 @@
 import { impact, sections } from "@/content/site";
-import { Mask, Rule, SectionTag, primitives, type } from "@/design-system/primitives";
+import { Mask, Rule, SectionTag, SplitText, primitives, type } from "@/design-system/primitives";
 import { cx } from "@/lib/cx";
 import s from "./Impact.module.css";
 
@@ -10,13 +10,10 @@ export function Impact() {
       <div data-r="g3" className={cx(primitives.grid3, s.head)}>
         <SectionTag data-reveal="" title={sec.title} index={sec.index} className={s.tag} />
         <Mask pad="display" className={s.headingMask}>
-          <h2 data-rise="" className={cx(type.display, s.heading)}>
-            {impact.heading}
+          <h2 data-rise="" data-split="" className={cx(type.display, s.heading)}>
+            <SplitText>{impact.heading}</SplitText>
           </h2>
         </Mask>
-        <p data-reveal="" data-d="200" className={cx(type.body, s.lede)}>
-          {impact.lede}
-        </p>
       </div>
       <div data-r="stats" className={s.stats}>
         <div />

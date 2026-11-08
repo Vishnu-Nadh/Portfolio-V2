@@ -37,16 +37,20 @@ export function About() {
           ),
         )}
       </p>
-      <div className={s.aside}>
-        <SectionTag data-reveal="" title={about.exploringTag.title} index={about.exploringTag.index} />
+      <div />
+      <div />
+      <div data-r="explore" className={s.explore}>
+        <SectionTag data-reveal="" inline title={about.exploringTag.title} index={about.exploringTag.index} />
         <div className={s.list}>
           {about.exploring.map((e, k) => (
             <div key={e} data-reveal="" data-d={120 + k * 90} className={s.item}>
-              {e}
+              <span className={type.accent}>—</span>
+              <span>{e}</span>
             </div>
           ))}
         </div>
       </div>
+      <div />
     </section>
   );
 }

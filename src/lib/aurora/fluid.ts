@@ -26,7 +26,7 @@ export const FLUID_DEFAULTS = {
   splatForce: 30,
   velocityDissipation: 2.8,
   dyeDissipation: 7.0,
-  distortion: 0.75,
+  distortion: 0.5625, // design's 0.75, reduced 25%
   aberration: 0.35,
   smoke: 0.12,
   touchForce: 0.4,

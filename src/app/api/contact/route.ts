@@ -1,10 +1,16 @@
+import { Resend } from "resend";
+import { profile } from "@/content/site";
 import { MAX_LENGTH, validateContact, type ContactFields } from "@/lib/contact";
+import { contactEmail, type ContactNote } from "@/lib/contact-email";
 
 /**
- * Receives contact-form notes and forwards them as JSON to CONTACT_WEBHOOK_URL
- * (Slack/Discord/Zapier/etc.). Without a webhook, development logs the note;
- * production refuses it so the visitor is told to email instead of the note
- * being silently dropped.
+ * Receives contact-form notes and emails them to CONTACT_TO_EMAIL via Resend,
+ * with reply-to set to the visitor so a reply goes straight to them.
+ *
+ * Env: RESEND_API_KEY, CONTACT_TO_EMAIL, optional CONTACT_FROM_EMAIL (must be
+ * on a domain verified in Resend; defaults to Resend's test sender).
+ * Without a key, development logs the note; production refuses it so the
+ * visitor is told to email instead of the note being silently dropped.
  */
 export async function POST(request: Request) {
   let body: Partial<ContactFields>;
@@ -23,7 +29,7 @@ export async function POST(request: Request) {
   const errors = validateContact(f);
   if (Object.keys(errors).length) return Response.json({ ok: false, errors }, { status: 422 });
 
-  const note = {
+  const note: ContactNote = {
     name: f.name.trim(),
     email: f.email.trim(),
     topic: f.topic.trim() || null,
@@ -31,22 +37,30 @@ export async function POST(request: Request) {
     receivedAt: new Date().toISOString(),
   };
 
-  const hook = process.env.CONTACT_WEBHOOK_URL;
-  if (hook) {
-    const res = await fetch(hook, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...note,
-        text: `New note from ${note.name} <${note.email}>${note.topic ? ` · ${note.topic}` : ""}\n\n${note.message}`,
-      }),
-    }).catch(() => null);
-    if (!res || !res.ok) return Response.json({ ok: false, error: "Delivery failed" }, { status: 502 });
-  } else if (process.env.NODE_ENV === "production") {
-    console.error("[contact] CONTACT_WEBHOOK_URL is not set; note not delivered");
-    return Response.json({ ok: false, error: "Contact delivery is not configured" }, { status: 503 });
-  } else {
-    console.info("[contact] note received (dev, no webhook)", note);
+  const apiKey = process.env.RESEND_API_KEY;
+  const to = process.env.CONTACT_TO_EMAIL;
+  if (!apiKey || !to) {
+    if (process.env.NODE_ENV === "production") {
+      console.error("[contact] RESEND_API_KEY / CONTACT_TO_EMAIL not set; note not delivered");
+      return Response.json({ ok: false, error: "Contact delivery is not configured" }, { status: 503 });
+    }
+    console.info("[contact] note received (dev, email not configured)", note);
+    return Response.json({ ok: true });
+  }
+
+  const { subject, text, html } = contactEmail(note);
+  const { error } = await new Resend(apiKey).emails.send({
+    from: process.env.CONTACT_FROM_EMAIL || `${profile.fullName} · Portfolio <onboarding@resend.dev>`,
+    to,
+    replyTo: note.email,
+    subject,
+    text,
+    html,
+    tags: [{ name: "source", value: "portfolio_contact" }],
+  });
+  if (error) {
+    console.error("[contact] Resend rejected the note:", error.name, error.message);
+    return Response.json({ ok: false, error: "Delivery failed" }, { status: 502 });
   }
 
   return Response.json({ ok: true });

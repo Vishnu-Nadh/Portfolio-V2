@@ -2,6 +2,16 @@
 export const motionSettings = {
   /** Soft smoke trail following the pointer. */
   cometTail: true,
+  /** Liquid lens distortion over the hero name. */
+  lensHover: true,
+  /** Copper grain particles shed by the hero lens. */
+  goldGrain: true,
+  /**
+   * Cursor-reactive fluid behind hero + intro, the alternative hero hover from
+   * the design's v4. Lazy-loaded, so off costs nothing. To use it, turn this
+   * on and lensHover off.
+   */
+  heroFluid: false,
   /** Preloader count-up and hero entrance. */
   intro: true,
   /** Scroll reveals, counters, parallax. Also gated by prefers-reduced-motion. */

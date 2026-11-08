@@ -9,7 +9,6 @@
   --c-surface-1: #151515;
   --c-surface-2: #181818;
   --c-surface-3: #1a1a1a;
-  --c-watermark: #171717;
   --c-line-faint: #1c1c1c;
   --c-line-soft: #1f1f1f;
   --c-line: #222;
@@ -17,10 +16,11 @@
   --c-line-strong: #2c2c2b;
   --c-rule: #3a3a39;
   --c-placeholder: #3e3e3d;
-  --c-text-ghost: #4a4a48;
-  --c-text-dim: #6e6e6c;
+  --c-text-ghost: #7c7c7a;
+  --c-text-dim: #8f8f8d;
   --c-text-muted: #8a8a88;
   --c-text-soft: #a6a6a4;
+  --c-text-lead: #c0c0be;
   --c-text-list: #c0c0be;
   --c-text: #d0d0ce;
   --c-text-strong: #e6e6e4;
@@ -42,10 +42,10 @@
   --ease-in-out: cubic-bezier(.83, 0, .17, 1);
 
   /* Layout */
-  --gutter: clamp(24px, 5vw, 72px);
+  --gutter: clamp(24px, 6vw, 112px);
   --edge-y: clamp(32px, 5vh, 53px);
-  --section-y: clamp(140px, 18vw, 240px);
-  --block-gap: clamp(96px, 11vw, 160px);
-  --grid-gap: 24px;
+  --section-y: clamp(160px, 22vw, 320px);
+  --block-gap: clamp(112px, 14vw, 208px);
+  --grid-gap: clamp(24px, 4vw, 72px);
   --grid-3: minmax(0, .75fr) minmax(0, 2fr) minmax(0, 1fr);
 }

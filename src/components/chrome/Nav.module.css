@@ -9,7 +9,7 @@
   background: linear-gradient(180deg, rgba(11, 10, 10, .92) 0%, rgba(11, 10, 10, .8) 45%, rgba(11, 10, 10, .45) 70%, rgba(11, 10, 10, 0) 100%);
   display: grid;
   grid-template-columns: minmax(0, .75fr) minmax(0, 2fr) auto;
-  column-gap: 24px;
+  column-gap: var(--grid-gap);
   align-items: center;
 }
 
